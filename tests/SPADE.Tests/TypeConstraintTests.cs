@@ -27,7 +27,7 @@ public class TypeConstraintTests
     [InlineData("(1,2)")]
     public void IsIntRejectsNonIntegers(string instance)
     {
-        Assert.ThrowsAny<Exception>(() => Parse("{N | N is int}", instance));
+        Assert.Throws<SpadeParseException>(() => Parse("{N | N is int}", instance));
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class TypeConstraintTests
     {
         string grammar = "{((N,E),K) | N is set, E subset N unorderedcross N, K is int}";
         Parse(grammar, "(({1,2},{{1,2}}),2)");
-        Assert.ThrowsAny<Exception>(() => Parse(grammar, "(({1,2},{{1,2}}),two)"));
+        Assert.Throws<SpadeParseException>(() => Parse(grammar, "(({1,2},{{1,2}}),two)"));
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public class TypeConstraintTests
     {
         string grammar = "{(N,E) | N is set, E subset {(e, w) | e is N unorderedcross N, w is int}}";
         Parse(grammar, "({1,2,3},{({1,2},4),({2,3},5)})");
-        Assert.ThrowsAny<Exception>(() => Parse(grammar, "({1,2,3},{({1,2},heavy)})"));
+        Assert.Throws<SpadeParseException>(() => Parse(grammar, "({1,2,3},{({1,2},heavy)})"));
     }
 
     [Theory]
@@ -59,7 +59,7 @@ public class TypeConstraintTests
     [InlineData("(1,2)")]
     public void IsSetRejectsValuesAndLists(string instance)
     {
-        Assert.ThrowsAny<Exception>(() => Parse("{S | S is set}", instance));
+        Assert.Throws<SpadeParseException>(() => Parse("{S | S is set}", instance));
     }
 
     [Theory]
@@ -75,13 +75,13 @@ public class TypeConstraintTests
     [InlineData("{1,2}")]
     public void IsListRejectsValuesAndSets(string instance)
     {
-        Assert.ThrowsAny<Exception>(() => Parse("{L | L is list}", instance));
+        Assert.Throws<SpadeParseException>(() => Parse("{L | L is list}", instance));
     }
 
     [Fact]
     public void SubsetIntStillChecksEveryElement()
     {
         Parse("{S | S subset int}", "{1,2,3}");
-        Assert.ThrowsAny<Exception>(() => Parse("{S | S subset int}", "{1,2,x}"));
+        Assert.Throws<SpadeParseException>(() => Parse("{S | S subset int}", "{1,2,x}"));
     }
 }

@@ -75,7 +75,8 @@ class SetDescriptor
 
     public SetDescriptor Cross(SetDescriptor other)
     {
-        Func<UtilCollection, bool> _isMember = (a) => isMember(a[0]) && other.isMember(a[1]);
+        Func<UtilCollection, bool> _isMember = (a) =>
+            a.IsOrdered() && a.Count() == 2 && isMember(a[0]) && other.isMember(a[1]);
         Func<UtilCollection> _genSet = () => genSet().Cross(other.genSet());
         return new SetDescriptor(map, _isMember, _genSet);
     }

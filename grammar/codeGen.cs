@@ -35,6 +35,12 @@ class codeGen : IcollListener {
         setDescriptor!.isMember(utilCollection);
     }
 
+    // A rule's text as written in the definition string, spacing included, for error messages.
+    private static string SourceText(ParserRuleContext context)
+    {
+        return context.Start.InputStream.GetText(Interval.Of(context.Start.StartIndex, context.Stop.StopIndex));
+    }
+
     /// <summary>
     /// Enter a parse tree produced by <see cref="collParser.start"/>.
     /// </summary>
@@ -91,7 +97,7 @@ class codeGen : IcollListener {
                 lst.Add(formatStack.Pop());           
             }
             lst.Reverse(); // have to reverse the list, since the leftmost should be the one that was popped first
-            formatStack.Push(new FormatDescriptor(lst));
+            formatStack.Push(new FormatDescriptor(lst, SourceText(context)));
         }
         if (context.TERM() != null)
         {
@@ -123,18 +129,18 @@ class codeGen : IcollListener {
     {
         if (context.@object().BUILT_IN() != null)
         {
-            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!));
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!, SourceText(context)));
         }
         else if (context.@object().BUILT_IN_SET() != null && context.DEFINITION().ToString() == "is")
         {
             // "N is int" is a type check, like "N is set". The integer set descriptor
             // pushed for it is only needed by other definitions, such as "S subset int".
             setDescriptorStack.Pop();
-            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN_SET().ToString()!));
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN_SET().ToString()!, SourceText(context)));
         }
         else
         {
-            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, setDescriptorStack.Pop()));
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, setDescriptorStack.Pop(), SourceText(context)));
         }
     }
     /// <summary>

@@ -39,7 +39,7 @@ public class UnorderedCrossTests
     [InlineData("({a,b,c},{{a,b},(b,c)})")]
     public void RejectsListEdges(string instance)
     {
-        Assert.ThrowsAny<Exception>(() => Parse(Graph, instance));
+        Assert.Throws<SpadeParseException>(() => Parse(Graph, instance));
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class UnorderedCrossTests
     [InlineData("({a,b,c},{{x,y}})")]
     public void RejectsEdgesWithUnknownNodes(string instance)
     {
-        Assert.ThrowsAny<Exception>(() => Parse(Graph, instance));
+        Assert.Throws<SpadeParseException>(() => Parse(Graph, instance));
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class UnorderedCrossTests
     {
         // A plain value is not an edge. It should fail the constraint, not
         // crash while trying to enumerate the value.
-        Exception e = Assert.ThrowsAny<Exception>(() => Parse(Graph, "({a,b},{a})"));
+        Exception e = Assert.Throws<SpadeParseException>(() => Parse(Graph, "({a,b},{a})"));
         Assert.IsNotType<InvalidOperationException>(e);
     }
 }
