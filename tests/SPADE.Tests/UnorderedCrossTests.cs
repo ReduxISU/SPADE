@@ -33,21 +33,20 @@ public class UnorderedCrossTests
         Assert.Equal("2", parser["K"].ToString());
     }
 
-    // Released versions accept list edges, and some grammars for directed
-    // graphs rely on it, so this keeps that behavior until they move to cross (#12).
+    // A list edge is an ordered pair, which belongs to cross, not unorderedcross.
     [Theory]
     [InlineData("({a,b,c},{(a,b)})")]
     [InlineData("({a,b,c},{{a,b},(b,c)})")]
-    public void StillAcceptsListEdges(string instance)
+    public void RejectsListEdges(string instance)
     {
-        StringParser parser = Parse(Graph, instance);
-        Assert.Equal(new UtilCollection(instance)[1], parser["E"]);
+        Assert.ThrowsAny<Exception>(() => Parse(Graph, instance));
     }
 
     [Fact]
-    public void RejectsListEdgesWithUnknownNodes()
+    public void CrossAcceptsListEdges()
     {
-        Assert.ThrowsAny<Exception>(() => Parse(Graph, "({a,b,c},{(a,d)})"));
+        StringParser parser = Parse("{(N,E) | N is set, E subset N cross N}", "({a,b,c},{(a,b),(b,a)})");
+        Assert.Equal(2, parser["E"].Count());
     }
 
     [Theory]

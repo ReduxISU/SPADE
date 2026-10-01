@@ -84,9 +84,9 @@ class SetDescriptor
     {
         Func<UtilCollection, bool> _isMember = (a) => 
         {
-            // Each member is a collection of nodes, like the edge {a,b}; a plain value is not.
-            // Lists such as (a,b) are still accepted because existing grammars rely on it (#12).
-            if (a.IsValue()) return false;
+            // Each member is a set of nodes, like the edge {a,b}. A list such as (a,b)
+            // is an ordered pair and belongs to cross, and a plain value is not an edge.
+            if (a.IsValue() || a.IsOrdered()) return false;
 
             foreach (UtilCollection item in a)
             {
