@@ -33,7 +33,7 @@ class ConstraintDescriptor
                     switch (built_in)
                     {
                         case "set":
-                            if (map[term].IsOrdered())
+                            if (map[term].IsValue() || map[term].IsOrdered())
                             {
                                 throw new Exception($"Constraint {term} {definition} {built_in} failed because {term} was not a set");
                             }
@@ -45,9 +45,9 @@ class ConstraintDescriptor
                             }
                             break;
                         case "int":
-                            if (!map[term].IsValue())
+                            if (!map[term].IsValue() || !int.TryParse(map[term].ToString(), out _))
                             {
-                                throw new Exception($"Constraint {term} {definition} {built_in} failed because {term} was not a value");
+                                throw new Exception($"Constraint {term} {definition} {built_in} failed because {map[term]} was not an integer");
                             }
                             break;
                     }

@@ -125,6 +125,13 @@ class codeGen : IcollListener {
         {
             constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!));
         }
+        else if (context.@object().BUILT_IN_SET() != null && context.DEFINITION().ToString() == "is")
+        {
+            // "N is int" is a type check, like "N is set". The integer set descriptor
+            // pushed for it is only needed by other definitions, such as "S subset int".
+            setDescriptorStack.Pop();
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN_SET().ToString()!));
+        }
         else
         {
             constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, setDescriptorStack.Pop()));
