@@ -54,7 +54,10 @@ Returns a new UtilCollections object that is the union of the two collections. O
 Returns if the two UtilCollections objects are equal to each other. Comparison is done by value, so two different instances of the UtilCollections class that have the same structure and elements are compared, it will return true. 
 
 ### Count
-Returns the length of the collection.
+Returns the length of the collection. For a multiset, repeated elements are counted every time they occur.
+
+### CountOf
+Returns how many times an element occurs: 0 or 1 in a set, any number in a multiset or list.
 
 ### ToList
 Returns a list representing the elements of the collection. If the collection is ordered, it returns the same list. If the collection is unordered, it is cast to a list and then returned.
@@ -67,6 +70,15 @@ Checks if the collection contains another UtilCollection object. Comparison is d
 
 ### Add
 Adds a UtilCollection object to the collection.
+
+### AsMultiset
+Returns the same elements as a multiset. For a set read from an instance string, this brings back the repeated elements the set dropped, so `{3,3,2,2}` gives four elements. Only sets and multisets can be read as multisets.
+
+### IsMultiset
+Returns true if the collection is a multiset.
+
+### IsSubsetOf
+Returns true if every element occurs in the other collection at least as many times as it does in this one. For multisets this compares counts, so `{7,7}` is in `{7,7,1}` but not in `{7,1}`. Both collections must be sets or multisets.
 
 ### parseInt
 Attempts to parse and return itself as an integer.

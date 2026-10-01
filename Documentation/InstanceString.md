@@ -39,3 +39,8 @@ expected , or } at position 5, found end of input
 for `{1,2`. Its `Position` (counting from 1), `Expected` and `Found` properties hold the same details. Nothing is guessed: unbalanced braces, extra text after the instance, empty elements such as `{1,,2}`, and empty input are all errors.
 
 Sets and lists can be nested up to 256 levels deep. Deeper input is rejected with a `SpadeParseException` rather than risking a stack overflow.
+
+## Multisets
+A multiset is written with curly braces, like a set: `{3,3,2,2}`. Read on its own, that is a set, and the repeated elements are dropped, leaving `{3,2}`. When the definition string marks the collection with `is multiset`, every element is kept, so `{3,3,2,2}` has four elements.
+
+Two multisets are equal when they hold the same elements the same number of times, in any order. A set and a multiset are never equal, even with the same elements.

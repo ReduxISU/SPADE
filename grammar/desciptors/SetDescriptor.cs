@@ -53,6 +53,8 @@ class SetDescriptor
     public SetDescriptor(Dictionary<string, UtilCollection> _map, FormatDescriptor formatDescriptor, List<ConstraintDescriptor> constraintDescriptors)
     {
         map = _map;
+        // OrderBy is stable, so the other constraints keep their order.
+        constraintDescriptors = constraintDescriptors.OrderBy(c => c.DeclaresMultiset ? 0 : 1).ToList();
         isMember = (collection) =>
         {
             formatDescriptor.parseFunc(map, collection);

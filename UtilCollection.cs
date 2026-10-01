@@ -15,6 +15,15 @@ public class UtilCollection
     private bool isOrdered;
     private bool isValue;
 
+    // A multiset keeps every occurrence in `list`, in input order, and how often each element
+    // occurs in `counts` (#1). It is unordered, like a set.
+    private bool isMultiset;
+    private Dictionary<UtilCollection, int>? counts;
+
+    // For a set read from an instance string: every element as written, duplicates included,
+    // so the set can still be read as a multiset if its definition says so.
+    private List<UtilCollection>? occurrences;
+
 
     public UtilCollection()
     {
@@ -34,11 +43,19 @@ public class UtilCollection
         value = parsed.value;
         isOrdered = parsed.isOrdered;
         isValue = parsed.isValue;
+        isMultiset = parsed.isMultiset;
+        counts = parsed.counts;
+        occurrences = parsed.occurrences;
     }
 
     internal static UtilCollection FromValue(string value)
     {
         return new UtilCollection { value = value, isValue = true };
+    }
+
+    internal static UtilCollection FromSetItems(List<UtilCollection> items)
+    {
+        return new UtilCollection(items.ToHashSet()) { occurrences = items };
     }
 
     public UtilCollection(HashSet<string> set_)
@@ -87,13 +104,19 @@ public class UtilCollection
 
     public void Add(UtilCollection item)
     {
-        if(isOrdered)
+        if (isMultiset)
+        {
+            list.Add(item);
+            counts![item] = CountOf(item) + 1;
+        }
+        else if(isOrdered)
         {
             list.Add(item);
         }
         else
         {
             set.Add(item);
+            occurrences?.Add(item);
         }
     }
 
@@ -101,7 +124,7 @@ public class UtilCollection
     {
         if (isValue) throw new InvalidOperationException("Cannot enumerate over a value");
 
-        if (isOrdered)
+        if (isOrdered || isMultiset)
             return list.GetEnumerator();
         else
             return set.GetEnumerator();
@@ -150,8 +173,56 @@ public class UtilCollection
         return isValue;
     }
 
+    public bool IsMultiset()
+    {
+        return isMultiset;
+    }
+
+    /// <summary>
+    /// The same elements as a multiset. For a set read from an instance string, this brings back
+    /// the duplicates the set dropped, so <c>{3,3,2,2}</c> gives four elements. Only for sets and multisets.
+    /// </summary>
+    public UtilCollection AsMultiset()
+    {
+        if (isValue || isOrdered) throw new InvalidOperationException("Only a set can be read as a multiset");
+        if (isMultiset) return this;
+
+        UtilCollection multiset = new UtilCollection { isMultiset = true, counts = new() };
+        foreach (UtilCollection item in occurrences ?? set.ToList())
+        {
+            multiset.Add(item);
+        }
+        return multiset;
+    }
+
+    /// <summary>How many times item occurs: 0 or 1 in a set, any number in a multiset or list.</summary>
+    public int CountOf(UtilCollection item)
+    {
+        if (isValue) throw new InvalidOperationException("Cannot count in a value");
+        if (isMultiset) return counts!.TryGetValue(item, out int n) ? n : 0;
+        if (isOrdered) return list.Count(x => x.Equals(item));
+        return set.Contains(item) ? 1 : 0;
+    }
+
+    /// <summary>
+    /// True if every element occurs in other at least as often as it does here, so the multiset
+    /// {7,7} is in {7,7,1} but not in {7,1}. Only for sets and multisets.
+    /// </summary>
+    public bool IsSubsetOf(UtilCollection other)
+    {
+        if (isValue || isOrdered || other.isValue || other.isOrdered)
+            throw new InvalidOperationException("IsSubsetOf needs two sets or multisets");
+
+        IEnumerable<UtilCollection> distinct = isMultiset ? counts!.Keys : set;
+        return distinct.All(item => CountOf(item) <= other.CountOf(item));
+    }
+
     public bool Contains(UtilCollection collection)
     {
+        if (isMultiset)
+        {
+            return counts!.ContainsKey(collection);
+        }
         if (isOrdered)
         {
             return list.Contains(collection);
@@ -163,7 +234,7 @@ public class UtilCollection
     }
     public int Count()
     {
-        if (isOrdered)
+        if (isOrdered || isMultiset)
         {
             return list.Count;
         }
@@ -181,6 +252,17 @@ public class UtilCollection
     public UtilCollection Intersect(UtilCollection other)
     {
         if (isOrdered != other.isOrdered) throw new InvalidOperationException("Can't take the intersection of a set and a list");
+        if (isMultiset != other.isMultiset) throw new InvalidOperationException("Can't take the intersection of a set and a multiset");
+        if (isMultiset)
+        {
+            // Each element occurs as often as in whichever side has fewer.
+            UtilCollection result = new UtilCollection { isMultiset = true, counts = new() };
+            foreach (UtilCollection item in list)
+            {
+                if (result.CountOf(item) < other.CountOf(item)) result.Add(item);
+            }
+            return result;
+        }
         if (!isOrdered)
         {
             return new UtilCollection(set.Intersect(other.set).ToHashSet());
@@ -194,6 +276,18 @@ public class UtilCollection
     public UtilCollection Union(UtilCollection other)
     {
         if (isOrdered != other.isOrdered) throw new InvalidOperationException("Can't take the union of a set and a list");
+        if (isMultiset != other.isMultiset) throw new InvalidOperationException("Can't take the union of a set and a multiset");
+        if (isMultiset)
+        {
+            // Each element occurs as often as in whichever side has more.
+            UtilCollection result = new UtilCollection { isMultiset = true, counts = new() };
+            foreach (UtilCollection item in list) result.Add(item);
+            foreach (UtilCollection item in other.list)
+            {
+                if (result.CountOf(item) < other.CountOf(item)) result.Add(item);
+            }
+            return result;
+        }
         if (!isOrdered)
         {
             return new UtilCollection(set.Union(other.set).ToHashSet());
@@ -224,12 +318,19 @@ public class UtilCollection
 
         UtilCollection other = (UtilCollection)obj;
 
-        // A value, a list and a set are never equal to each other, even when empty.
-        if (isValue != other.isValue || isOrdered != other.isOrdered) return false;
+        // A value, a list, a set and a multiset are never equal to each other, even when empty.
+        if (isValue != other.isValue || isOrdered != other.isOrdered || isMultiset != other.isMultiset) return false;
 
         if (isValue)
         {
             return value == other.value;
+        }
+
+        if (isMultiset)
+        {
+            return list.Count == other.list.Count
+                && counts!.Count == other.counts!.Count
+                && counts.All(entry => other.CountOf(entry.Key) == entry.Value);
         }
 
         if (isOrdered)
@@ -266,6 +367,17 @@ public class UtilCollection
             return hash.ToHashCode();
         }
 
+        if (isMultiset)
+        {
+            // Order-independent, like a set, but every occurrence counts.
+            int total = 0;
+            foreach (UtilCollection item in list)
+            {
+                total = unchecked(total + item.GetHashCode());
+            }
+            return HashCode.Combine(isOrdered, isMultiset, list.Count, total);
+        }
+
         // Sets are equal regardless of order, so combine element hashes with
         // an order-independent sum rather than hashing ToString(), which
         // follows insertion order.
@@ -279,6 +391,11 @@ public class UtilCollection
 
     public List<UtilCollection> ToList()
     {
+        if (isMultiset)
+        {
+            // A copy, so changes to it can't get out of step with the counts.
+            return new List<UtilCollection>(list);
+        }
         if (isOrdered)
         {
             return list;

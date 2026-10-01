@@ -93,7 +93,7 @@ internal class InstanceScanner
         }
 
         if (open == '(') return new UtilCollection(items);
-        return new UtilCollection(items.ToHashSet());
+        return UtilCollection.FromSetItems(items);
     }
 
     private UtilCollection ParseValue()

@@ -35,6 +35,9 @@ class ConstraintDescriptor
         return s.Length <= maxLength ? s : s.Substring(0, maxLength) + "...";
     }
 
+    // "N is multiset" changes how N is read, so it runs before the other constraints (#1).
+    public bool DeclaresMultiset => definition == "is" && built_in == "multiset";
+
     private SpadeParseException Failure(string reason)
     {
         return new SpadeParseException($"Constraint {text} failed: {reason}");
@@ -50,7 +53,7 @@ class ConstraintDescriptor
                     switch (built_in)
                     {
                         case "set":
-                            if (map[term].IsValue() || map[term].IsOrdered())
+                            if (map[term].IsValue() || map[term].IsOrdered() || map[term].IsMultiset())
                             {
                                 throw Failure($"{Describe(map[term])} is not a set");
                             }
@@ -60,6 +63,13 @@ class ConstraintDescriptor
                             {
                                 throw Failure($"{Describe(map[term])} is not a list");
                             }
+                            break;
+                        case "multiset":
+                            if (map[term].IsValue() || map[term].IsOrdered())
+                            {
+                                throw Failure($"{Describe(map[term])} is not a multiset");
+                            }
+                            map[term] = map[term].AsMultiset();
                             break;
                         case "int":
                             if (!map[term].IsValue() || !int.TryParse(map[term].ToString(), out _))
