@@ -273,6 +273,9 @@ public class UtilCollection
 
         UtilCollection other = (UtilCollection)obj;
 
+        // A value, a list and a set are never equal to each other, even when empty.
+        if (isValue != other.isValue || isOrdered != other.isOrdered) return false;
+
         if (isValue)
         {
             return value == other.value;
@@ -296,7 +299,31 @@ public class UtilCollection
 
     public override int GetHashCode()
     {
-        return ToString().GetHashCode();
+        if (isValue)
+        {
+            return value!.GetHashCode();
+        }
+
+        if (isOrdered)
+        {
+            HashCode hash = new HashCode();
+            hash.Add(isOrdered);
+            foreach (UtilCollection item in list)
+            {
+                hash.Add(item);
+            }
+            return hash.ToHashCode();
+        }
+
+        // Sets are equal regardless of order, so combine element hashes with
+        // an order-independent sum rather than hashing ToString(), which
+        // follows insertion order.
+        int sum = 0;
+        foreach (UtilCollection item in set)
+        {
+            sum = unchecked(sum + item.GetHashCode());
+        }
+        return HashCode.Combine(isOrdered, set.Count, sum);
     }
 
     public List<UtilCollection> ToList()

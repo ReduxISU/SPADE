@@ -1,6 +1,15 @@
 # Development
 Feel free to contribute! Also feel free to open any issues on [github](https://github.com/Jetison333/SPADE) with bugs or feature requests.
 
+## Tests
+The tests live in tests/SPADE.Tests and use xUnit. Run them from the repository root with
+
+```bash
+dotnet test tests/SPADE.Tests
+```
+
+The test project targets .NET 8, so you need the .NET 8 SDK or newer. The library itself still targets .NET 6.
+
 
 ## antlr
 If you need to edit the grammar inside of coll.g4 file, use the following commands (you will need to install antlr4):
