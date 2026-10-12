@@ -8,6 +8,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # lets NuGet/login trade a GitHub OIDC token for a short-lived nuget.org key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -27,5 +30,11 @@ jobs:
         run: dotnet test tests/SPADE.Tests/SPADE.Tests.csproj -c Release
       - name: Pack
         run: dotnet pack DiscreteParser.csproj -c Release -o out
+      # Trusted publishing: the nuget.org policy (owner Trosper3) must name ReduxISU/SPADE and publish.yml.
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: Trosper3
       - name: Push
-        run: dotnet nuget push "out/*.nupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push "out/*.nupkg" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
