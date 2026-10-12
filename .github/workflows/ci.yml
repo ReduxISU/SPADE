@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            8.0.x
+      - name: Build
+        run: dotnet build DiscreteParser.csproj -c Release
+      # The test project arrives with the first fix PR; until then there is nothing to run.
+      - name: Test
+        if: hashFiles('tests/SPADE.Tests/SPADE.Tests.csproj') != ''
+        run: dotnet test tests/SPADE.Tests/SPADE.Tests.csproj -c Release
