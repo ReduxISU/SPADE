@@ -64,6 +64,13 @@ class SetDescriptor
     public SetDescriptor(Dictionary<String, UtilCollection> _map, BuiltInSet builtInSet)
     {
         map = _map;
+        if (builtInSet == BuiltInSet.numbers)
+        {
+            // A single value only: a set or list's text is never a number anyway, but say so.
+            isMember = (checkedColl) => checkedColl.IsValue() && NumberValue.IsNumber(checkedColl.ToString());
+            genSet = () => throw new Exception("Can't generate infinite number set");
+            return;
+        }
         isMember = (checkedColl) => int.TryParse(checkedColl.ToString(), out _);
         genSet = () => throw new Exception("Can't generate infinite integer set");
     }
@@ -95,7 +102,7 @@ class SetDescriptor
 
     /// <summary>
     /// For an item that isn't a member: the first piece of it missing from a part named in the set
-    /// expression, and that part. Null when no such piece is found, e.g. for <c>int</c> or a set
+    /// expression, and that part. Null when no such piece is found, e.g. for <c>int</c>, <c>number</c> or a set
     /// literal, or when the item has the wrong shape (a value where cross needs a pair).
     /// </summary>
     public (string Value, string Part)? FindMissing(UtilCollection item)

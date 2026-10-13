@@ -1,4 +1,5 @@
 using SPADE;
+using SPADE.Grammar.Enums;
 
 namespace SPADE.Grammar.descriptor;
 
@@ -83,6 +84,12 @@ class ConstraintDescriptor
                             if (!map[term].IsValue() || !int.TryParse(map[term].ToString(), out _))
                             {
                                 throw Failure($"{Describe(map[term])} is not an integer", map[term]);
+                            }
+                            break;
+                        case "number":
+                            if (!map[term].IsValue() || !NumberValue.IsNumber(map[term].ToString()))
+                            {
+                                throw Failure($"{Describe(map[term])} is not a number", map[term]);
                             }
                             break;
                         case "string":

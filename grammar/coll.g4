@@ -47,7 +47,7 @@ BUILT_IN  : 'set'
           | 'weightedGraph' 
           | 'string' 
 		  ;
-BUILT_IN_SET: 'int';
+BUILT_IN_SET: 'int' | 'number';
 TERM      : [a-zA-Z0-9.]+ ;
 WS        : [ \t\r\n]+ -> skip ;
 CM        : [,] ; 

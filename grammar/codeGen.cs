@@ -133,8 +133,8 @@ class codeGen : IcollListener {
         }
         else if (context.@object().BUILT_IN_SET() != null && context.DEFINITION().ToString() == "is")
         {
-            // "N is int" is a type check, like "N is set". The integer set descriptor
-            // pushed for it is only needed by other definitions, such as "S subset int".
+            // "N is int" and "N is number" are type checks, like "N is set". The set descriptor
+            // pushed for them is only needed by other definitions, such as "S subset int".
             setDescriptorStack.Pop();
             constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN_SET().ToString()!, SourceText(context)));
         }
@@ -163,7 +163,8 @@ class codeGen : IcollListener {
 
         if (context.BUILT_IN_SET() != null)
         {
-            setDescriptorStack.Push(new SetDescriptor(map, BuiltInSet.integers));
+            BuiltInSet builtInSet = context.BUILT_IN_SET().GetText() == "number" ? BuiltInSet.numbers : BuiltInSet.integers;
+            setDescriptorStack.Push(new SetDescriptor(map, builtInSet));
         }
 
         if (context.TERM() != null)

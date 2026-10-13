@@ -25,6 +25,9 @@ public enum PartKind
     /// <summary>"is int".</summary>
     Int,
 
+    /// <summary>"is number": a decimal number such as 2.5, -0.75 or .5; every int is one.</summary>
+    Number,
+
     /// <summary>"is string": a single value, not a set, list or multiset.</summary>
     String,
 
@@ -43,7 +46,7 @@ public class DefinitionPart
     /// <summary>The name as written in the format, e.g. "E".</summary>
     public string Name { get; }
 
-    /// <summary>What the part's constraints say it is. An "is set", "is multiset", "is list", "is int" or "is string" constraint wins over "subset" or "in".</summary>
+    /// <summary>What the part's constraints say it is. An "is set", "is multiset", "is list", "is int", "is number" or "is string" constraint wins over "subset" or "in".</summary>
     public PartKind Kind { get; }
 
     /// <summary>
@@ -218,7 +221,7 @@ public class DefinitionDescription
             Subjects(inner, subjects);
     }
 
-    // An "is set/multiset/list/int/string" wins the kind; Of comes from the first subset, else the first membership.
+    // An "is set/multiset/list/int/number/string" wins the kind; Of comes from the first subset, else the first membership.
     private static (PartKind, string?) Classify(List<collParser.ConstraintContext> constraints, HashSet<string> names)
     {
         PartKind? type = null;
@@ -254,7 +257,7 @@ public class DefinitionDescription
                 }
                 if (obj.BUILT_IN_SET() != null)
                 {
-                    type ??= PartKind.Int;
+                    type ??= objText == "number" ? PartKind.Number : PartKind.Int;
                     continue;
                 }
             }
