@@ -406,6 +406,11 @@ public class UtilCollection
         }
     }
 
+    /// <summary>
+    /// A set or list as an instance string that reads back as the same collection. A value inside it
+    /// is quoted when it has to be, such as <c>{"a,b",c}</c>. A value on its own is its text, unquoted,
+    /// so <c>"hello, world"</c> read alone gives <c>hello, world</c>.
+    /// </summary>
     override public string ToString()
     {
         if (isValue)
@@ -423,7 +428,9 @@ public class UtilCollection
     {
         if (isValue)
         {
-            sb.Append(value);
+            // Inside a collection, a value that couldn't be read back as written, such as
+            // "hello, world", is quoted (#22). Every other value is written as it is.
+            sb.Append(InstanceScanner.NeedsQuotes(value!) ? InstanceScanner.Quote(value!) : value);
             return;
         }
 

@@ -29,6 +29,15 @@ reads the same as `{(1,2),(2,3)}`. The rules are:
 - Inside a value, whitespace next to `[ ] ; : =` is dropped, so `x1 : True` reads as `x1:True`.
 - Other whitespace inside a value is kept. Plain spaces stay as typed, so `{New York, Los Angeles}` holds `New York`. A run containing a tab or line break becomes a single space, so a value wrapped onto two lines, `New` and `York`, reads as `New York`.
 
+## Quoted values
+A value can be written in double quotes, so it can hold text that would otherwise end it: `"hello, world"` is one value, and `{"a,b", c}` is a set of two. Inside quotes, everything is kept exactly as written, including `{ } ( ) ,` and all whitespace. Two escapes exist inside quotes: `\"` for a quote and `\\` for a backslash. Any other backslash in quotes is an error, as is a missing closing quote (`expected closing " at position 5, found end of input` for `"abc`).
+
+The quotes aren't part of the value. `"kitten"` and `kitten` are the same value, so `"5"` passes `is int`, and a quoted value passes `is string`.
+
+A quote can only start a value, so `ab"c"` is an error. Outside quotes a backslash is an ordinary character.
+
+When a set or list is turned back into text, a value inside it is quoted only if it has to be: it contains `{ } ( ) , "`, is empty, or has whitespace that the rules above would change. Every other value is written as before, so `{"a,b",c}` prints as `{"a,b",c}` and `{"a","b"}` prints as `{a,b}`. A value on its own prints as its text, without quotes.
+
 ## Errors
 An instance string that can't be read throws `SpadeParseException`, which says where the problem is, what was expected and what was found:
 

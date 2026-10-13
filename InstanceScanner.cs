@@ -16,6 +16,11 @@ namespace SPADE;
 /// inside a value is a wrap (<c>New\nYork</c> reads as <c>New York</c>).</item>
 /// </list>
 /// These match the rules Redux applied before parsing, so that layer can be removed.
+/// <para>
+/// Quoted values (#22): a value written in double quotes, <c>"hello, world"</c>, is kept exactly as
+/// written and may contain <c>{ } ( ) ,</c> and any whitespace. Inside quotes, <c>\"</c> is a quote and
+/// <c>\\</c> a backslash; no other escape exists. A quote can't appear inside an unquoted value.
+/// </para>
 /// </remarks>
 internal class InstanceScanner
 {
@@ -27,6 +32,10 @@ internal class InstanceScanner
 
     // Characters that end a value.
     private const string Structural = "{}(),";
+
+    // Characters that end an unquoted value: the structural ones, and a quote, which may only
+    // start a value (#22).
+    private const string ValueEnd = "{}(),\"";
 
     // Characters inside a value that whitespace never belongs next to.
     private const string ValueDelimiters = "[];:=";
@@ -61,6 +70,7 @@ internal class InstanceScanner
         char c = text[pos];
         if (c == '{' || c == '(') return ParseCollection(depth + 1);
         if (Structural.IndexOf(c) >= 0) throw Error("a value, { or (");
+        if (c == '"') return ParseQuotedValue();
         return ParseValue();
     }
 
@@ -99,12 +109,50 @@ internal class InstanceScanner
     private UtilCollection ParseValue()
     {
         int start = pos;
-        while (!AtEnd() && Structural.IndexOf(text[pos]) < 0) pos++;
-        return UtilCollection.FromValue(NormalizeValue(start, pos));
+        while (!AtEnd() && ValueEnd.IndexOf(text[pos]) < 0) pos++;
+        return UtilCollection.FromValue(NormalizeValue(text, start, pos));
+    }
+
+    // Expects pos at the opening quote. The value is the text up to the closing quote, unescaped.
+    private UtilCollection ParseQuotedValue()
+    {
+        pos++;
+        StringBuilder sb = new();
+        while (true)
+        {
+            if (AtEnd()) throw Error("closing \"");
+            char c = text[pos++];
+            if (c == '"') break;
+            if (c == '\\')
+            {
+                if (AtEnd() || (text[pos] != '"' && text[pos] != '\\')) throw Error("\\\" or \\\\ after \\");
+                c = text[pos++];
+            }
+            sb.Append(c);
+        }
+        return UtilCollection.FromValue(sb.ToString());
+    }
+
+    /// <summary>
+    /// Whether a value must be written in quotes to be read back as itself: it is empty, contains
+    /// <c>{ } ( ) , "</c>, or has whitespace the unquoted rules would change.
+    /// </summary>
+    internal static bool NeedsQuotes(string value)
+    {
+        if (value.Length == 0) return true;
+        if (value.IndexOfAny(ValueEnd.ToCharArray()) >= 0) return true;
+        if (char.IsWhiteSpace(value[0])) return true;
+        return NormalizeValue(value, 0, value.Length) != value;
+    }
+
+    /// <summary>The value in quotes, with <c>"</c> and <c>\</c> escaped as <c>\"</c> and <c>\\</c>.</summary>
+    internal static string Quote(string value)
+    {
+        return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
     }
 
     // Applies the whitespace rules to text[start..end). text[start] is never whitespace.
-    private string NormalizeValue(int start, int end)
+    private static string NormalizeValue(string text, int start, int end)
     {
         StringBuilder sb = new(end - start);
         int i = start;
