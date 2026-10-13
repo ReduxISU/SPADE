@@ -85,6 +85,13 @@ class ConstraintDescriptor
                                 throw Failure($"{Describe(map[term])} is not an integer", map[term]);
                             }
                             break;
+                        case "string":
+                            // Any single value is a string, a number-looking one like 5 included.
+                            if (!map[term].IsValue())
+                            {
+                                throw Failure($"{Describe(map[term])} is not a string", map[term]);
+                            }
+                            break;
                     }
                 break;
 

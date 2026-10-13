@@ -119,14 +119,27 @@ public class DefinitionDescriptionTests
     [Fact]
     public void UnconstrainedAndUnknownTypesAreAny()
     {
-        DefinitionDescription d = Describe("{(A,B,C) | B is string, C is graph}");
+        DefinitionDescription d = Describe("{(A,B,C) | B is text, C is graph}");
 
         Assert.Equal(PartKind.Any, d["A"].Kind);
         Assert.Empty(d["A"].Constraints);
         Assert.Equal(PartKind.Any, d["B"].Kind);
         Assert.Null(d["B"].Of);
-        Assert.Equal(new[] { "B is string" }, d["B"].Constraints);
+        Assert.Equal(new[] { "B is text" }, d["B"].Constraints);
         Assert.Equal(PartKind.Any, d["C"].Kind);
+    }
+
+    [Fact]
+    public void IsStringIsTheStringKind()
+    {
+        DefinitionDescription d = Describe("{(x,y,S) | x is string, y is string, S is set, S is string}");
+
+        Assert.Equal(PartKind.String, d["x"].Kind);
+        Assert.Null(d["x"].Of);
+        Assert.Equal(new[] { "x is string" }, d["x"].Constraints);
+        Assert.Equal(PartKind.String, d["y"].Kind);
+        // The first "is" type wins, as for the other types.
+        Assert.Equal(PartKind.Set, d["S"].Kind);
     }
 
     [Fact]

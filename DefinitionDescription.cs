@@ -25,6 +25,9 @@ public enum PartKind
     /// <summary>"is int".</summary>
     Int,
 
+    /// <summary>"is string": a single value, not a set, list or multiset.</summary>
+    String,
+
     /// <summary>"subset X", with no "is" type; <see cref="DefinitionPart.Of"/> holds X.</summary>
     Subset,
 
@@ -40,7 +43,7 @@ public class DefinitionPart
     /// <summary>The name as written in the format, e.g. "E".</summary>
     public string Name { get; }
 
-    /// <summary>What the part's constraints say it is. An "is set", "is multiset", "is list" or "is int" constraint wins over "subset" or "in".</summary>
+    /// <summary>What the part's constraints say it is. An "is set", "is multiset", "is list", "is int" or "is string" constraint wins over "subset" or "in".</summary>
     public PartKind Kind { get; }
 
     /// <summary>
@@ -215,7 +218,7 @@ public class DefinitionDescription
             Subjects(inner, subjects);
     }
 
-    // An "is set/multiset/list/int" wins the kind; Of comes from the first subset, else the first membership.
+    // An "is set/multiset/list/int/string" wins the kind; Of comes from the first subset, else the first membership.
     private static (PartKind, string?) Classify(List<collParser.ConstraintContext> constraints, HashSet<string> names)
     {
         PartKind? type = null;
@@ -243,6 +246,7 @@ public class DefinitionDescription
                         "set" => PartKind.Set,
                         "multiset" => PartKind.Multiset,
                         "list" => PartKind.List,
+                        "string" => PartKind.String,
                         _ => null,
                     };
                     type ??= builtIn;
@@ -256,7 +260,7 @@ public class DefinitionDescription
             }
 
             // "is X" / "in X": a member of another part or of a set expression. A bare word that names
-            // no part (e.g. "is string") isn't something SPADE knows yet, so it says nothing.
+            // no part (e.g. "is text") isn't something SPADE knows, so it says nothing.
             if (obj.TERM() != null && !names.Contains(objText)) continue;
             memberOf ??= objText;
         }

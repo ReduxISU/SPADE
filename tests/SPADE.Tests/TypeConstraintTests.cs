@@ -84,4 +84,59 @@ public class TypeConstraintTests
         Parse("{S | S subset int}", "{1,2,3}");
         Assert.Throws<SpadeParseException>(() => Parse("{S | S subset int}", "{1,2,x}"));
     }
+
+    // "is string" accepts any single value and rejects a collection (#22).
+    [Theory]
+    [InlineData("kitten", "kitten")]
+    [InlineData("New York", "New York")]
+    [InlineData("  New York  ", "New York")]
+    [InlineData("5", "5")]
+    [InlineData("q0", "q0")]
+    public void IsStringAcceptsSingleValues(string instance, string value)
+    {
+        StringParser parser = new("{S | S is string}");
+        parser.parse(instance);
+        Assert.True(parser["S"].IsValue());
+        Assert.Equal(value, parser["S"].ToString());
+    }
+
+    [Theory]
+    [InlineData("{S | S is string}", "{a,b}", "{a,b}")]
+    [InlineData("{S | S is string}", "{}", "{}")]
+    [InlineData("{S | S is string}", "(a,b)", "(a,b)")]
+    [InlineData("{S | S is string}", "()", "()")]
+    [InlineData("{S | S is multiset, S is string}", "{a,a}", "{a,a}")]
+    public void IsStringRejectsCollections(string grammar, string instance, string element)
+    {
+        SpadeParseException e = Assert.Throws<SpadeParseException>(() => Parse(grammar, instance));
+        Assert.Equal($"Constraint S is string failed: {element} is not a string", e.Message);
+        Assert.Equal("S", e.Part);
+        Assert.Equal(element, e.Element);
+        Assert.Null(e.MissingValue);
+    }
+
+    [Fact]
+    public void IsStringChecksNestedFields()
+    {
+        string grammar = "{(x,y) | x is string, y is string}";
+        Parse(grammar, "(kitten,sitting)");
+        SpadeParseException e = Assert.Throws<SpadeParseException>(() => Parse(grammar, "(kitten,{sitting})"));
+        Assert.Equal("y", e.Part);
+    }
+
+    [Fact]
+    public void IsStringInADfaDefinition()
+    {
+        string grammar = "{((N,A,E,S,F),I) | N is set, A is set, E is N cross A cross N, S is string, F is set, I is string}";
+        StringParser parser = new(grammar);
+        parser.parse("(({q0,q1},{0,1},{(q0,0,q1),(q1,1,q0)},q0,{q1}),0110)");
+        Assert.Equal("q0", parser["S"].ToString());
+        Assert.Equal("0110", parser["I"].ToString());
+        Assert.Equal(PartKind.String, parser.Definition["S"].Kind);
+        Assert.Equal(PartKind.String, parser.Definition["I"].Kind);
+
+        SpadeParseException e = Assert.Throws<SpadeParseException>(() => Parse(grammar, "(({q0,q1},{0,1},{(q0,0,q1)},{q0},{q1}),0110)"));
+        Assert.Equal("Constraint S is string failed: {q0} is not a string", e.Message);
+        Assert.Equal("S", e.Part);
+    }
 }

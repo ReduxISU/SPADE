@@ -45,6 +45,7 @@ BUILT_IN  : 'set'
           | 'list' 
           | 'graph' 
           | 'weightedGraph' 
+          | 'string' 
 		  ;
 BUILT_IN_SET: 'int';
 TERM      : [a-zA-Z0-9.]+ ;
