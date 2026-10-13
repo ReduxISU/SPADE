@@ -38,9 +38,17 @@ class ConstraintDescriptor
     // "N is multiset" changes how N is read, so it runs before the other constraints (#1).
     public bool DeclaresMultiset => definition == "is" && built_in == "multiset";
 
-    private SpadeParseException Failure(string reason)
+    // The failure belongs to this constraint's name, so a caller can find the part without reading
+    // the message (#19). The element is kept in full; the message shortens it.
+    private SpadeParseException Failure(string reason, UtilCollection element, (string Value, string Part)? missing = null)
     {
-        return new SpadeParseException($"Constraint {text} failed: {reason}");
+        return new SpadeParseException($"Constraint {text} failed: {reason}")
+        {
+            Part = term,
+            Element = element.ToString(),
+            MissingValue = missing?.Value,
+            ExpectedIn = missing?.Part,
+        };
     }
 
 
@@ -55,26 +63,26 @@ class ConstraintDescriptor
                         case "set":
                             if (map[term].IsValue() || map[term].IsOrdered() || map[term].IsMultiset())
                             {
-                                throw Failure($"{Describe(map[term])} is not a set");
+                                throw Failure($"{Describe(map[term])} is not a set", map[term]);
                             }
                             break;
                         case "list":
                             if (map[term].IsUnordered())
                             {
-                                throw Failure($"{Describe(map[term])} is not a list");
+                                throw Failure($"{Describe(map[term])} is not a list", map[term]);
                             }
                             break;
                         case "multiset":
                             if (map[term].IsValue() || map[term].IsOrdered())
                             {
-                                throw Failure($"{Describe(map[term])} is not a multiset");
+                                throw Failure($"{Describe(map[term])} is not a multiset", map[term]);
                             }
                             map[term] = map[term].AsMultiset();
                             break;
                         case "int":
                             if (!map[term].IsValue() || !int.TryParse(map[term].ToString(), out _))
                             {
-                                throw Failure($"{Describe(map[term])} is not an integer");
+                                throw Failure($"{Describe(map[term])} is not an integer", map[term]);
                             }
                             break;
                     }
@@ -85,13 +93,26 @@ class ConstraintDescriptor
                 {
                         if (map[term].IsValue())
                         {
-                            throw Failure($"{Describe(map[term])} is not a set");
+                            throw Failure($"{Describe(map[term])} is not a set", map[term]);
                         }
                         foreach (UtilCollection item in map[term])
                         {
-                            if (!set.isMember(item))
+                            bool member;
+                            try
                             {
-                                throw Failure($"{Describe(item)} is not a member");
+                                member = set.isMember(item);
+                            }
+                            catch (SpadeParseException e)
+                            {
+                                // A constraint inside a nested set failed, such as w is int in
+                                // {(e,w) | ...}. The message stays, but the error belongs to this part
+                                // and item. A missing piece is dropped if its part is a nested name.
+                                bool nested = e.ExpectedIn == null || set.declaredNames.Contains(e.ExpectedIn);
+                                throw e.BelongingTo(term, item.ToString(), nested ? null : e.MissingValue, nested ? null : e.ExpectedIn);
+                            }
+                            if (!member)
+                            {
+                                throw Failure($"{Describe(item)} is not a member", item, set.FindMissing(item));
                             }
                         }
                 }

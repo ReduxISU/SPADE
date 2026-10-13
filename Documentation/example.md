@@ -46,6 +46,23 @@ catch (SpadeParseException e)
 }
 ```
 
+To act on an error without reading its message, use its properties. When a constraint or type check fails, `Part` names the part of the outer format it belongs to and `Element` holds the member or value that failed, in full even when the message shortens it. When that element is missing a piece from another part, `MissingValue` and `ExpectedIn` name the piece and the part:
+
+```c#
+StringParser graph = new("{(N,E) | N is set, E subset N unorderedcross N}");
+try
+{
+    graph.parse("({1,2},{{1,9}})");
+}
+catch (SpadeParseException e)
+{
+    // "Constraint E subset N unorderedcross N failed: {1,9} is not a member"
+    Console.WriteLine($"{e.Part} {e.Element} {e.MissingValue} {e.ExpectedIn}"); // E {1,9} 9 N
+}
+```
+
+A failure inside a nested set, like `w is int` in `E subset {(e,w) | ...}`, belongs to the outer part (`E`) and the member of it that failed. `MissingValue` and `ExpectedIn` are null when the set isn't built from parts, as in `S subset int`, and all four are null for text that can't be read or a shape that doesn't match the definition string.
+
 Any other exception type means a bug in SPADE or in the definition string, not bad input.
 
 ## Describing a definition string
