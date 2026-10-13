@@ -47,3 +47,28 @@ catch (SpadeParseException e)
 ```
 
 Any other exception type means a bug in SPADE or in the definition string, not bad input.
+
+## Describing a definition string
+
+`Definition` tells you the names and types a [definition string](DefinitionString.md) declares, without needing an instance string. This is useful for building an editor or form for a problem before any instance exists.
+
+```c#
+StringParser problem = new("{((N,E),K) | N is set, E subset N unorderedcross N, K is int}");
+DefinitionDescription d = problem.Definition;
+
+Console.WriteLine(d.Outline);       // ((N,E),K)
+
+foreach (DefinitionPart part in d.Parts)
+{
+    // N: Set at [0,0]
+    // E: Subset of N unorderedcross N at [0,1]
+    // K: Int at [1]
+    Console.WriteLine($"{part} at [{string.Join(",", part.Path)}]");
+}
+
+Console.WriteLine(d["E"].Constraints[0]); // E subset N unorderedcross N
+```
+
+Each part has a `Name`, a `Kind` (`Set`, `Multiset`, `List`, `Int`, `Subset`, `Member`, or `Any` when nothing says what it is), `Of` (what it is a subset or member of, as written), `Path` (where it sits in the outline), and `Constraints` (every constraint naming it, as written). Only the outer format's names are parts; names inside a nested set, like `a` in `S subset {a | a subset U}`, are not.
+
+`Definition` is read the first time you use it, so creating a `StringParser` never throws. If the definition string can't be read, `Definition` throws a `FormatException` naming it. `DefinitionDescription.Parse(definitionString)` does the same without a `StringParser`.

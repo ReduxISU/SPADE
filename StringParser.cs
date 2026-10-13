@@ -14,6 +14,14 @@ public class StringParser
     
     private bool hasParsed;
 
+    private DefinitionDescription? definition;
+
+    /// <summary>
+    /// The names and types the definition string declares, read without parsing an instance.
+    /// Read on first use; throws FormatException if the definition string can't be read.
+    /// </summary>
+    public DefinitionDescription Definition => definition ??= DefinitionDescription.Parse(format);
+
     public StringParser(string f)
     {
         format = f;
