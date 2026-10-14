@@ -81,7 +81,7 @@ class ConstraintDescriptor
                             map[term] = map[term].AsMultiset();
                             break;
                         case "int":
-                            if (!map[term].IsValue() || !int.TryParse(map[term].ToString(), out _))
+                            if (!map[term].IsValue() || !IntValue.TryParse(map[term].ToString(), out _))
                             {
                                 throw Failure($"{Describe(map[term])} is not an integer", map[term]);
                             }

@@ -246,7 +246,7 @@ public class UtilCollection
 
     public int parseInt()
     {
-        return int.Parse(ToString());
+        return SPADE.Grammar.Enums.IntValue.Parse(ToString());
     }
 
     public UtilCollection Intersect(UtilCollection other)

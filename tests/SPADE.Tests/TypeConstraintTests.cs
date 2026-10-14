@@ -1,3 +1,4 @@
+using System.Globalization;
 using SPADE;
 using Xunit;
 
@@ -138,5 +139,32 @@ public class TypeConstraintTests
         SpadeParseException e = Assert.Throws<SpadeParseException>(() => Parse(grammar, "(({q0,q1},{0,1},{(q0,0,q1)},{q0},{q1}),0110)"));
         Assert.Equal("Constraint S is string failed: {q0} is not a string", e.Message);
         Assert.Equal("S", e.Part);
+    }
+
+    [Fact]
+    public void IntsDoNotDependOnTheMachineCulture()
+    {
+        CultureInfo saved = CultureInfo.CurrentCulture;
+        try
+        {
+            // A culture whose minus sign is not '-' (some cultures use U+2212): "-5" must still be an int.
+            CultureInfo culture = (CultureInfo)CultureInfo.InvariantCulture.Clone();
+            culture.NumberFormat.NegativeSign = "~";
+            CultureInfo.CurrentCulture = culture;
+
+            Parse("{N | N is int}", "-5");
+            Parse("{S | S subset int}", "{-5, 3}");
+            StringParser parser = new("{N | N is int}");
+            parser.parse("-5");
+            Assert.Equal(-5, parser["N"].parseInt());
+
+            SpadeParseException e = Assert.Throws<SpadeParseException>(() => Parse("{N | N is int}", "~5"));
+            Assert.Equal("Constraint N is int failed: ~5 is not an integer", e.Message);
+            Assert.Throws<SpadeParseException>(() => Parse("{S | S subset int}", "{~5}"));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = saved;
+        }
     }
 }

@@ -20,3 +20,18 @@ static class NumberValue
             && double.IsFinite(value);
     }
 }
+
+// What "int" accepts, shared by "x is int", "S subset int" and UtilCollection.parseInt. Read with the
+// invariant culture, like "number", so a machine's culture (its minus sign, say) never changes the answer.
+static class IntValue
+{
+    public static bool TryParse(string text, out int value)
+    {
+        return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+    }
+
+    public static int Parse(string text)
+    {
+        return int.Parse(text, NumberStyles.Integer, CultureInfo.InvariantCulture);
+    }
+}

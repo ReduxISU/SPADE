@@ -71,7 +71,7 @@ class SetDescriptor
             genSet = () => throw new Exception("Can't generate infinite number set");
             return;
         }
-        isMember = (checkedColl) => int.TryParse(checkedColl.ToString(), out _);
+        isMember = (checkedColl) => IntValue.TryParse(checkedColl.ToString(), out _);
         genSet = () => throw new Exception("Can't generate infinite integer set");
     }
 
