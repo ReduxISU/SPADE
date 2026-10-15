@@ -13,8 +13,8 @@ using SPADE;
 ## Code example
 
 ```c#
-string definitionString = "{{(N,E) | N is set, E subset N cross N";
-string InstanceString = "({A,B,C,D},{(A,B),(B,C),(C,D),(D,A),(A,C)})";
+string definitionString = "{(N,E) | N is set, E subset N cross N}";
+string instanceString = "({A,B,C,D},{(A,B),(B,C),(C,D),(D,A),(A,C)})";
 
 StringParser graph = new(definitionString);
 graph.parse(instanceString);
