@@ -28,7 +28,7 @@ One way to build an object is with binary operations, building an object out of 
 - "unorderedcross" similar to cross, it gives the cross product of two sets, but with each element as a set instead of a list, "A unorderedcross B"
 
 #### Set comprehension
-Another way to build an object is with set comprehension. This alows SPADE to nest a definition inside of a larger definition. An example is "S subset {a | a subset U}", which constraints S to be a subset of all possible sets described by the set comprehension, which is this case is all possible subsets of U.
+Another way to build an object is with set comprehension. This allows SPADE to nest a definition inside of a larger definition. An example is "S subset {a | a subset U}", which constrains S to be a subset of all possible sets described by the set comprehension, which in this case is all possible subsets of U.
 
 #### Literal
 It will also possible to specify an object as a literal, using the same format as instance strings, although this is not implemented yet.
