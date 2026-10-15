@@ -5,5 +5,5 @@ engine = "dotnet"
 solution = "SPADE.slnx"
 
 [unit-test]
-# The standard we're holding to. Floor 70%; the goal is 80%+. New code needs tests to keep it above the floor.
+# The standard we're holding to. Floor 70%; the goal is 80%+. Line coverage is about 8% (Oct 2026, UtilCollection equality tests only); new code needs tests to reach the floor.
 coverage-min = 70
