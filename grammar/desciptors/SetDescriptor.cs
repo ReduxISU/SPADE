@@ -10,7 +10,7 @@ namespace SPADE.Grammar.descriptor;
 
 class SetDescriptor
 {
-    public Func<UtilCollection,bool> isMember;
+    public Func<UtilCollection, bool> isMember;
 
     public Func<UtilCollection> genSet;
 
@@ -23,7 +23,7 @@ class SetDescriptor
         genSet = () => new UtilCollection("");
     }
 
-    public SetDescriptor(Dictionary<String, UtilCollection> _map, Func<UtilCollection,bool> _isMember, Func<UtilCollection> _genSet)
+    public SetDescriptor(Dictionary<String, UtilCollection> _map, Func<UtilCollection, bool> _isMember, Func<UtilCollection> _genSet)
     {
         map = _map;
         isMember = _isMember;
@@ -62,7 +62,7 @@ class SetDescriptor
             {
                 constraintDescriptor.check(map);
             }
-            return true; 
+            return true;
         };
 
         genSet = () => throw new NotImplementedException("generating every set descriptor not implemented");
@@ -85,7 +85,7 @@ class SetDescriptor
 
     public SetDescriptor UnorderedCross(SetDescriptor other)
     {
-        Func<UtilCollection, bool> _isMember = (a) => 
+        Func<UtilCollection, bool> _isMember = (a) =>
         {
             // Each member is a set of nodes, like the edge {a,b}. A list such as (a,b)
             // is an ordered pair and belongs to cross, and a plain value is not an edge.
@@ -97,10 +97,10 @@ class SetDescriptor
                 {
                     return false;
                 }
-            } 
+            }
             return true;
         };
-        Func<UtilCollection> _genSet = () => 
+        Func<UtilCollection> _genSet = () =>
         {
             UtilCollection set = new("{}");
             foreach (UtilCollection first in genSet())
@@ -120,7 +120,7 @@ class SetDescriptor
 
     public SetDescriptor Union(SetDescriptor other)
     {
-        
+
         Func<UtilCollection, bool> _isMember = (a) => isMember(a) || other.isMember(a);
         Func<UtilCollection> _genSet = () => genSet().Union(other.genSet());
         return new SetDescriptor(map, _isMember, _genSet);

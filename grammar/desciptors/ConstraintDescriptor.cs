@@ -13,18 +13,18 @@ class ConstraintDescriptor
 
     public ConstraintDescriptor(String _term, String _definition, SetDescriptor _set, String _text)
     {
-       term = _term;
-       definition = _definition; 
-       set = _set;
-       text = _text;
+        term = _term;
+        definition = _definition;
+        set = _set;
+        text = _text;
     }
 
     public ConstraintDescriptor(String _term, String _definition, String _built_in, String _text)
     {
-       term = _term;
-       definition = _definition; 
-       built_in = _built_in;
-       text = _text;
+        term = _term;
+        definition = _definition;
+        built_in = _built_in;
+        text = _text;
     }
 
     // Values in error messages are shortened, so a huge instance doesn't make a huge message.
@@ -83,17 +83,17 @@ class ConstraintDescriptor
             case "subset":
                 if (set != null)
                 {
-                        if (map[term].IsValue())
+                    if (map[term].IsValue())
+                    {
+                        throw Failure($"{Describe(map[term])} is not a set");
+                    }
+                    foreach (UtilCollection item in map[term])
+                    {
+                        if (!set.isMember(item))
                         {
-                            throw Failure($"{Describe(map[term])} is not a set");
+                            throw Failure($"{Describe(item)} is not a member");
                         }
-                        foreach (UtilCollection item in map[term])
-                        {
-                            if (!set.isMember(item))
-                            {
-                                throw Failure($"{Describe(item)} is not a member");
-                            }
-                        }
+                    }
                 }
                 break;
         }
