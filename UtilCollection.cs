@@ -15,6 +15,12 @@ public class UtilCollection
     private bool isOrdered;
     private bool isValue;
 
+    // Set the first time this collection is hashed. A HashSet keeps an element under the hash it
+    // had when it went in, so changing the element (or anything inside it) afterwards would leave
+    // it under a stale hash, and lookups would quietly miss it. Once frozen, every change throws.
+    // Hashing a list or set hashes its elements, so they freeze too, all the way down.
+    private bool frozen;
+    private int hashCode;
 
     public UtilCollection()
     {
@@ -61,15 +67,16 @@ public class UtilCollection
         }
     }
 
+    // Both copy, so later changes to the caller's list or set can't change this collection.
     public UtilCollection(List<UtilCollection> list__)
     {
-        list = list__;
+        list = new List<UtilCollection>(list__);
         isOrdered = true;
     }
 
     public UtilCollection(HashSet<UtilCollection> set__)
     {
-        set = set__;
+        set = new HashSet<UtilCollection>(set__);
         isOrdered = false;
     }
 
@@ -83,12 +90,14 @@ public class UtilCollection
         set
         {
             if (!isOrdered) throw new InvalidOperationException("Cannot index into a set");
+            ThrowIfFrozen();
             list[index] = value;
         }
     }
 
     public void Add(UtilCollection item)
     {
+        ThrowIfFrozen();
         if (isOrdered)
         {
             list.Add(item);
@@ -250,7 +259,28 @@ public class UtilCollection
         return true;
     }
 
+    private void ThrowIfFrozen()
+    {
+        if (frozen)
+        {
+            throw new InvalidOperationException(
+                "This collection has been hashed (it is in a set or used as a key) and can't be changed; "
+                + "build it fully before adding it to a set.");
+        }
+    }
+
+    // The first call freezes the collection, so the hash can't change and is worked out only once.
     public override int GetHashCode()
+    {
+        if (!frozen)
+        {
+            hashCode = ComputeHashCode();
+            frozen = true;
+        }
+        return hashCode;
+    }
+
+    private int ComputeHashCode()
     {
         if (isValue)
         {
@@ -283,7 +313,8 @@ public class UtilCollection
     {
         if (isOrdered)
         {
-            return list;
+            // A copy, so changes to it can't reach a collection that may already be frozen.
+            return new List<UtilCollection>(list);
         }
         else
         {
