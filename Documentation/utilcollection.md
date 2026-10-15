@@ -81,7 +81,7 @@ Asserts that the collection is ordered (i.e., a list).
 Asserts that the collection is unordered (i.e., a set).
 
 ### assertPair
-Asserts that the collection is both unordered and has a certain length. The default length is 2, and a custom length can be passed in.
+Asserts that the collection is both ordered (i.e., a list) and has a certain length. The default length is 2, and a custom length can be passed in.
 
 ### assertCount
 Asserts that the collection has the same count or length as the argument. Works for both unordered and ordered collections.
