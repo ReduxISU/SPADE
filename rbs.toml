@@ -1,0 +1,9 @@
+# Redux Build System pipeline config. See github.com/ReduxISU/Redux_Build_System.
+# SPADE is a NuGet library with no image, so it has no [artifact] / [integration] / [push];
+# publish.yml still does the NuGet release.
+engine = "dotnet"
+solution = "SPADE.slnx"
+
+[unit-test]
+# The standard we're holding to. Floor 70%; the goal is 80%+. Line coverage is about 8% (Oct 2026, UtilCollection equality tests only); new code needs tests to reach the floor.
+coverage-min = 70
