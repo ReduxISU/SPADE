@@ -72,7 +72,7 @@ Checks if the collection contains another UtilCollection object. Comparison is d
 Adds a UtilCollection object to the collection. Throws `InvalidOperationException` if the collection has been hashed (see below).
 
 ### Collections freeze once hashed
-A `HashSet` or `Dictionary` files each element under the hash code it had when it went in. If the element changed afterwards, it would sit under a stale hash: `Contains` would miss it and duplicates could slip in, with no error. So the first time a UtilCollection is hashed, it freezes, and `Add` or assigning to an index throws `InvalidOperationException`. That happens when it is added to a set (including a UtilCollection set), used as a dictionary key, or put inside a list or set that is itself hashed, since hashing a collection hashes everything inside it.
+A `HashSet` or `Dictionary` files each element under the hash code it had when it went in. If the element changed afterwards, it would sit under a stale hash: `Contains` would miss it and duplicates could slip in, with no error. So the first time a UtilCollection is hashed, it freezes, and `Add` or assigning to an index throws `InvalidOperationException`. That happens when it is added to a set (including a UtilCollection set), used as a dictionary key, or put inside a list or set that is itself hashed, since hashing a collection hashes everything inside it. Multisets freeze the same way.
 
 Build each collection fully, then add it to a set:
 

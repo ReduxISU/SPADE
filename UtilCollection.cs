@@ -59,9 +59,10 @@ public class UtilCollection
         return new UtilCollection { value = value, isValue = true };
     }
 
+    // Copies items, like the constructors, so the caller's list can't change this set later.
     internal static UtilCollection FromSetItems(List<UtilCollection> items)
     {
-        return new UtilCollection(items.ToHashSet()) { occurrences = items };
+        return new UtilCollection(items.ToHashSet()) { occurrences = new List<UtilCollection>(items) };
     }
 
     public UtilCollection(HashSet<string> set_)
