@@ -2,9 +2,9 @@
 # UtilCollection
 
 ## Introduction
-UtilCollections is a class that combines sets and lists, or *collections*, into one type of object, and provides a constructor that builds specified collections from strings. UtilCollections can represent a recursive structure, as the elements of the collection can themselves be collections. Otherwise, elements can be represented as strings.
+UtilCollections is a class that combines sets or lists, or *collections*, into one type of object, and provides a constructor that builds specified collections from strings. UtilCollections can represent a recursive structure, as the elements of the collection can themselves be collections. Otherwise, elements can be represented as strings.
 
-UtilCollections is meant as a helper class to parse instances of problems in Redux. The class understands the format of Problem instance strings (the strings that define a particular instance of a problem). It provides methods that assert that the problem instance is correctly defines a problems variables, and also provides methods to do calculations with those variables. 
+UtilCollections is meant as a helper class to parse instances of problems in Redux. The class understands the format of Problem instance strings (the strings that define a particular instance of a problem). It provides methods that assert that the problem instance correctly defines a problem's variables, and also provides methods to do calculations with those variables. 
 
 ## Format of input string
 UtilCollection expects strings in the format that is typically used by Redux. A set (or unordered collection) of elements \(e_0,...,e_k\) uses curly braces as follows:
@@ -29,7 +29,7 @@ As an example, the default instance of hamiltonian path is:
 ({1,2,3,4,5},{{2,1},{1,3},{2,3},{3,5},{2,4},{4,5}})
 ```
 
-Hamiltonian path is a graph promblem, and the string follows the formal definition of a graph, namely a list whose first element is a set of the nodes, and the second element is a set of the edges. 
+Hamiltonian path is a graph problem, and the string follows the formal definition of a graph, namely a list whose first element is a set of the nodes, and the second element is a set of the edges. 
 
 ## Utility Methods
 UtilCollections provides a few Utility methods to help process and extract the instance information. Each method works for both ordered and unordered collections, unless specified otherwise.
@@ -45,13 +45,13 @@ foreach (UtilCollection item in collection)
 ```
 
 ### Intersect
-Returns a new UtilCollection object that is the intersection of the two collections. Only works with unordered collections 
+Returns a new UtilCollection object that is the intersection of the two collections. Only works with unordered collections.
 
 ### Union
 Returns a new UtilCollections object that is the union of the two collections. Only works with unordered collections.
 
 ### Equals
-Returns if the two UtilCollections objects are equal to each other. Comparison is done by value, so two different instances of the UtilCollections class that have the same structure and elements are compared, it will return true. 
+Returns True if the two UtilCollections objects are equal to each other and False otherwise. Comparison is done by value, so if two different instances of the UtilCollections class that have the same structure and elements are compared, equals will return True. 
 
 ### Count
 Returns the length of the collection. For a multiset, repeated elements are counted every time they occur.
@@ -87,16 +87,16 @@ Attempts to parse and return itself as an integer.
 UtilCollection also provides ways to assert that the instance is structured the way that it should be, that things are sets where they should be, and things are lists where they should be. Asserts will cause an error to be thrown if the conditions are not met.
 
 ### assertOrdered
-Asserts that the collection is ordered, or a set.
+Asserts that the collection is ordered (i.e., a list).
 
 ### assertUnordered
-Asserts that the collection is unordered or a list.
+Asserts that the collection is unordered (i.e., a set).
 
 ### assertPair
-Asserts that the collection is both unordered and has a certain length. The default length is 2, and a custom length can be passed in.
+Asserts that the collection is both ordered (i.e., a list) and has a certain length. The default length is 2, and a custom length can be passed in.
 
 ### assertCount
-Asserts that the collection has the same count or length as the argument. Works for both unordered and ordered collections.\
+Asserts that the collection has the same count or length as the argument. Works for both unordered and ordered collections.
 
 ## Example
 
