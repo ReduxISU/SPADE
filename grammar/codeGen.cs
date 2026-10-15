@@ -10,18 +10,19 @@ using SPADE.Grammar.Enums;
 
 namespace SPADE.Grammar;
 
-class codeGen : IcollListener {
+class codeGen : IcollListener
+{
     public Dictionary<string, UtilCollection> map;
 
     public Stack<FormatDescriptor> formatStack;
-    public SetDescriptor ?setDescriptor;
+    public SetDescriptor? setDescriptor;
 
     public Stack<SetDescriptor> setDescriptorStack;
 
     public Stack<ConstraintDescriptor> constraintDescriptorStack;
     public Stack<Stack<ConstraintDescriptor>> constraintDescriptorStackStack;
 
-    public codeGen() : base() 
+    public codeGen() : base()
     {
         map = new();
         formatStack = new();
@@ -94,7 +95,7 @@ class codeGen : IcollListener {
             List<FormatDescriptor> lst = new();
             for (int i = 0; i < context.format().Length; i++)
             {
-                lst.Add(formatStack.Pop());           
+                lst.Add(formatStack.Pop());
             }
             lst.Reverse(); // have to reverse the list, since the leftmost should be the one that was popped first
             formatStack.Push(new FormatDescriptor(lst, SourceText(context)));
