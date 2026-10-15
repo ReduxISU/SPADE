@@ -35,7 +35,7 @@ Hamiltonian path is a graph problem, and the string follows the formal definitio
 UtilCollections provides a few Utility methods to help process and extract the instance information. Each method works for both ordered and unordered collections, unless specified otherwise.
 
 ### Indexing
-If the collection is ordered, then you can index into the list using square brackets to get each element of the list, the same as you would for an array. Returns a UtilCollections object.
+If the collection is ordered, then you can index into the list using square brackets to get each element of the list, the same as you would for an array. Returns a UtilCollections object. Assigning to an index (`list[0] = item`) replaces that element, unless the list has been hashed (see [Collections freeze once hashed](#collections-freeze-once-hashed)).
 
 ### Enumeration
 Using foreach loops to iterate over each element in the collection is also possible, for example, using a UtilCollection object named collection:
@@ -57,7 +57,7 @@ Returns True if the two UtilCollections objects are equal to each other and Fals
 Returns the length of the collection.
 
 ### ToList
-Returns a list representing the elements of the collection. If the collection is ordered, it returns the same list. If the collection is unordered, it is cast to a list and then returned.
+Returns a list representing the elements of the collection. If the collection is ordered, it returns a copy of the list, so changing the copy doesn't change the collection. If the collection is unordered, it is cast to a list and then returned.
 
 ### ToString
 Returns the string representation of the UtilCollection.
@@ -66,7 +66,21 @@ Returns the string representation of the UtilCollection.
 Checks if the collection contains another UtilCollection object. Comparison is done by value. Returns true if it contains it, false if it doesn't.
 
 ### Add
-Adds a UtilCollection object to the collection.
+Adds a UtilCollection object to the collection. Throws `InvalidOperationException` if the collection has been hashed (see below).
+
+### Collections freeze once hashed
+A `HashSet` or `Dictionary` files each element under the hash code it had when it went in. If the element changed afterwards, it would sit under a stale hash: `Contains` would miss it and duplicates could slip in, with no error. So the first time a UtilCollection is hashed, it freezes, and `Add` or assigning to an index throws `InvalidOperationException`. That happens when it is added to a set (including a UtilCollection set), used as a dictionary key, or put inside a list or set that is itself hashed, since hashing a collection hashes everything inside it.
+
+Build each collection fully, then add it to a set:
+
+```c#
+UtilCollection edge = new UtilCollection("{}");
+edge.Add(new UtilCollection("1"));
+edge.Add(new UtilCollection("2"));
+edges.Add(edge); // edge is frozen from here on
+```
+
+A collection that has never been hashed can still be changed freely. The constructors that take a `List<UtilCollection>` or `HashSet<UtilCollection>` copy it, so changing the original afterwards doesn't change the collection.
 
 ### parseInt
 Attempts to parse and return itself as an integer.
