@@ -8,7 +8,7 @@ The tests live in tests/SPADE.Tests and use xUnit. Run them from the repository 
 dotnet test tests/SPADE.Tests
 ```
 
-The test project targets .NET 8, so you need the .NET 8 SDK or newer. The library itself still targets .NET 6.
+The test project targets .NET 10, so you need the .NET 10 SDK or newer. The library itself still targets .NET 6, and SDK 10 builds it.
 
 
 ## antlr
