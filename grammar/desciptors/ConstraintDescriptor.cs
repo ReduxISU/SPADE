@@ -13,18 +13,18 @@ class ConstraintDescriptor
 
     public ConstraintDescriptor(String _term, String _definition, SetDescriptor _set, String _text)
     {
-       term = _term;
-       definition = _definition; 
-       set = _set;
-       text = _text;
+        term = _term;
+        definition = _definition;
+        set = _set;
+        text = _text;
     }
 
     public ConstraintDescriptor(String _term, String _definition, String _built_in, String _text)
     {
-       term = _term;
-       definition = _definition; 
-       built_in = _built_in;
-       text = _text;
+        term = _term;
+        definition = _definition;
+        built_in = _built_in;
+        text = _text;
     }
 
     // Values in error messages are shortened, so a huge instance doesn't make a huge message.
@@ -98,30 +98,30 @@ class ConstraintDescriptor
             case "subset":
                 if (set != null)
                 {
-                        if (map[term].IsValue())
+                    if (map[term].IsValue())
+                    {
+                        throw Failure($"{Describe(map[term])} is not a set", map[term]);
+                    }
+                    foreach (UtilCollection item in map[term])
+                    {
+                        bool member;
+                        try
                         {
-                            throw Failure($"{Describe(map[term])} is not a set", map[term]);
+                            member = set.isMember(item);
                         }
-                        foreach (UtilCollection item in map[term])
+                        catch (SpadeParseException e)
                         {
-                            bool member;
-                            try
-                            {
-                                member = set.isMember(item);
-                            }
-                            catch (SpadeParseException e)
-                            {
-                                // A constraint inside a nested set failed, such as w is int in
-                                // {(e,w) | ...}. The message stays, but the error belongs to this part
-                                // and item. A missing piece is dropped if its part is a nested name.
-                                bool nested = e.ExpectedIn == null || set.declaredNames.Contains(e.ExpectedIn);
-                                throw e.BelongingTo(term, item.ToString(), nested ? null : e.MissingValue, nested ? null : e.ExpectedIn);
-                            }
-                            if (!member)
-                            {
-                                throw Failure($"{Describe(item)} is not a member", item, set.FindMissing(item));
-                            }
+                            // A constraint inside a nested set failed, such as w is int in
+                            // {(e,w) | ...}. The message stays, but the error belongs to this part
+                            // and item. A missing piece is dropped if its part is a nested name.
+                            bool nested = e.ExpectedIn == null || set.declaredNames.Contains(e.ExpectedIn);
+                            throw e.BelongingTo(term, item.ToString(), nested ? null : e.MissingValue, nested ? null : e.ExpectedIn);
                         }
+                        if (!member)
+                        {
+                            throw Failure($"{Describe(item)} is not a member", item, set.FindMissing(item));
+                        }
+                    }
                 }
                 break;
         }
