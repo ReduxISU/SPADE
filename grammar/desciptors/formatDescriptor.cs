@@ -14,7 +14,7 @@ class FormatDescriptor
     public FormatDescriptor(String term)
     {
         names.Add(term);
-        parseFunc = (map, coll) => {map[term] = coll;};
+        parseFunc = (map, coll) => { map[term] = coll; };
     }
 
     public FormatDescriptor(List<FormatDescriptor> lst, String text)
@@ -28,7 +28,7 @@ class FormatDescriptor
             }
             for (int i = 0; i < lst.Count(); i++)
             {
-               lst[i].parseFunc(map, coll[i]);
+                lst[i].parseFunc(map, coll[i]);
             }
         };
     }

@@ -2,7 +2,8 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace SPADE.Grammar.Enums;
-enum BuiltInSet {integers, numbers}
+
+enum BuiltInSet { integers, numbers }
 
 // What "number" accepts, shared by "x is number" and "S subset number" (#23).
 static class NumberValue

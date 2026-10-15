@@ -64,7 +64,7 @@ public class UtilCollection
         set = new();
         foreach (string i in set_)
         {
-                set.Add(new UtilCollection(i)); 
+            set.Add(new UtilCollection(i));
         }
     }
 
@@ -74,7 +74,7 @@ public class UtilCollection
         set = new();
         foreach (HashSet<string> i in set_)
         {
-                set.Add(new UtilCollection(i)); 
+            set.Add(new UtilCollection(i));
         }
     }
 
@@ -92,14 +92,16 @@ public class UtilCollection
 
     public UtilCollection this[int index]
     {
-        get { 
+        get
+        {
             if (!isOrdered) throw new InvalidOperationException("Cannot index into a set");
-            return list[index]; 
-            }
-        set { 
+            return list[index];
+        }
+        set
+        {
             if (!isOrdered) throw new InvalidOperationException("Cannot index into a set");
-            list[index] = value; 
-            }
+            list[index] = value;
+        }
     }
 
     public void Add(UtilCollection item)
@@ -109,7 +111,7 @@ public class UtilCollection
             list.Add(item);
             counts![item] = CountOf(item) + 1;
         }
-        else if(isOrdered)
+        else if (isOrdered)
         {
             list.Add(item);
         }
@@ -156,7 +158,7 @@ public class UtilCollection
 
     public void assertUnordered()
     {
-        if(isOrdered) throw new InvalidOperationException("Ordered");
+        if (isOrdered) throw new InvalidOperationException("Ordered");
     }
 
     public bool IsUnordered()
@@ -272,7 +274,7 @@ public class UtilCollection
             throw new NotImplementedException();
         }
     }
-    
+
     public UtilCollection Union(UtilCollection other)
     {
         if (isOrdered != other.isOrdered) throw new InvalidOperationException("Can't take the union of a set and a list");
@@ -303,9 +305,9 @@ public class UtilCollection
         UtilCollection ret = new UtilCollection();
         foreach (UtilCollection a in this)
         {
-            foreach(UtilCollection b in other)
+            foreach (UtilCollection b in other)
             {
-                UtilCollection add = new UtilCollection(new List<UtilCollection>{a,b});
+                UtilCollection add = new UtilCollection(new List<UtilCollection> { a, b });
                 ret.Add(add);
             }
         }
