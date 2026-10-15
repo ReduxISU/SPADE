@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/SPADE.Tests/SPADE.Tests.csproj" />
+  </Folder>
+  <Project Path="DiscreteParser.csproj" />
+</Solution>
