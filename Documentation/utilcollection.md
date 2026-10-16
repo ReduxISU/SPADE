@@ -85,6 +85,8 @@ edges.Add(edge); // edge is frozen from here on
 
 A collection that has never been hashed can still be changed freely. The constructors that take a `List<UtilCollection>` or `HashSet<UtilCollection>` copy it, so changing the original afterwards doesn't change the collection.
 
+A frozen collection can't change, so it is safe to share between threads: hashing, comparing, `Contains` and enumerating it from several threads at once all work. Building a collection is not thread-safe, the same as `List` and `HashSet`: fill it on one thread, then share it.
+
 ### AsMultiset
 Returns the same elements as a multiset. For a set read from an instance string, this brings back the repeated elements the set dropped, so `{3,3,2,2}` gives four elements. Only sets and multisets can be read as multisets.
 
