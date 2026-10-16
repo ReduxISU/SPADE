@@ -363,6 +363,19 @@ public class UtilCollection
         return true;
     }
 
+    // Freezes this collection and everything inside it, so it can be shared between threads, or
+    // kept, knowing nothing will change it. Hashing does the freezing, all the way down.
+    public UtilCollection Freeze()
+    {
+        GetHashCode();
+        return this;
+    }
+
+    public bool IsFrozen()
+    {
+        return frozen;
+    }
+
     private void ThrowIfFrozen()
     {
         if (frozen)
