@@ -127,17 +127,7 @@ public class DefinitionDescription
     /// </summary>
     public static DefinitionDescription Parse(string definition)
     {
-        if (definition == null) throw new FormatException("Definition string is null");
-
-        ThrowingErrorListener listener = new(definition);
-        collLexer lexer = new(new AntlrInputStream(definition));
-        lexer.RemoveErrorListeners();
-        lexer.AddErrorListener(listener);
-        collParser parser = new(new CommonTokenStream(lexer));
-        parser.RemoveErrorListeners();
-        parser.AddErrorListener(listener);
-
-        collParser.SetContext set = parser.start().set();
+        collParser.SetContext set = ThrowingErrorListener.Parse(definition).set();
         collParser.FormatContext? format = set.format();
         if (format == null)
             throw new FormatException($"Definition string \"{definition}\" is a list of values, not a format followed by |");
@@ -279,31 +269,5 @@ public class DefinitionDescription
     private static string SourceText(ParserRuleContext context)
     {
         return context.Start.InputStream.GetText(Interval.Of(context.Start.StartIndex, context.Stop.StopIndex));
-    }
-
-    // Turns the first lexer or parser error into a FormatException naming the definition string.
-    private class ThrowingErrorListener : IAntlrErrorListener<int>, IAntlrErrorListener<IToken>
-    {
-        private readonly string definition;
-
-        public ThrowingErrorListener(string definition)
-        {
-            this.definition = definition;
-        }
-
-        public void SyntaxError(TextWriter output, IRecognizer recognizer, int offendingSymbol, int line, int charPositionInLine, string msg, RecognitionException e)
-        {
-            Fail(charPositionInLine, msg);
-        }
-
-        public void SyntaxError(TextWriter output, IRecognizer recognizer, IToken offendingSymbol, int line, int charPositionInLine, string msg, RecognitionException e)
-        {
-            Fail(charPositionInLine, msg);
-        }
-
-        private void Fail(int charPositionInLine, string msg)
-        {
-            throw new FormatException($"Definition string \"{definition}\" can't be read: {msg} at position {charPositionInLine + 1}");
-        }
     }
 }
