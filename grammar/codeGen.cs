@@ -10,18 +10,19 @@ using SPADE.Grammar.Enums;
 
 namespace SPADE.Grammar;
 
-class codeGen : IcollListener {
+class codeGen : IcollListener
+{
     public Dictionary<string, UtilCollection> map;
 
     public Stack<FormatDescriptor> formatStack;
-    public SetDescriptor ?setDescriptor;
+    public SetDescriptor? setDescriptor;
 
     public Stack<SetDescriptor> setDescriptorStack;
 
     public Stack<ConstraintDescriptor> constraintDescriptorStack;
     public Stack<Stack<ConstraintDescriptor>> constraintDescriptorStackStack;
 
-    public codeGen() : base() 
+    public codeGen() : base()
     {
         map = new();
         formatStack = new();
@@ -88,7 +89,7 @@ class codeGen : IcollListener {
             List<FormatDescriptor> lst = new();
             for (int i = 0; i < context.format().Length; i++)
             {
-                lst.Add(formatStack.Pop());           
+                lst.Add(formatStack.Pop());
             }
             lst.Reverse(); // have to reverse the list, since the leftmost should be the one that was popped first
             formatStack.Push(new FormatDescriptor(lst));
@@ -124,6 +125,13 @@ class codeGen : IcollListener {
         if (context.@object().BUILT_IN() != null)
         {
             constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!));
+        }
+        else if (context.@object().BUILT_IN_SET() != null && context.DEFINITION().ToString() == "is")
+        {
+            // "N is int" is a type check, like "N is set". The integer set descriptor
+            // pushed for it is only needed by other definitions, such as "S subset int".
+            setDescriptorStack.Pop();
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN_SET().ToString()!));
         }
         else
         {
