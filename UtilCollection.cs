@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Runtime.Serialization;
+using System.Text;
 
 namespace SPADE;
 
@@ -14,52 +15,65 @@ public class UtilCollection
     private bool isOrdered;
     private bool isValue;
 
+    // A multiset keeps every occurrence in `list`, in input order, and how often each element
+    // occurs in `counts` (#1). It is unordered, like a set.
+    private bool isMultiset;
+    private Dictionary<UtilCollection, int>? counts;
+
+    // For a set read from an instance string: every element as written, duplicates included,
+    // so the set can still be read as a multiset if its definition says so.
+    private List<UtilCollection>? occurrences;
+
+    // Set the first time this collection is hashed. A HashSet keeps an element under the hash it
+    // had when it went in, so changing the element (or anything inside it) afterwards would leave
+    // it under a stale hash, and lookups would quietly miss it. Once frozen, every change throws.
+    // Hashing a list or set hashes its elements, so they freeze too, all the way down.
+    // volatile: GetHashCode writes hashCode before frozen, so a thread that sees frozen also sees
+    // the hash. A frozen collection is safe to read from several threads.
+    private volatile bool frozen;
+    private int hashCode;
 
     public UtilCollection()
     {
 
     }
 
+    /// <summary>
+    /// Reads an instance string such as <c>({1,2},{(1,2)})</c>. Throws
+    /// <see cref="SpadeParseException"/> if it isn't a well-formed value, set or list.
+    /// See <see cref="InstanceScanner"/> for how whitespace is handled.
+    /// </summary>
     public UtilCollection(string instance)
     {
-        if (instance[0] == '{')
-        {
-            isOrdered = false;
-            isValue = false;
-            instance = instance.Substring(1, instance.Length - 2);
-            while (instance != "")
-            {
-                string item = findMatchingBrace(instance);
-                set.Add(new UtilCollection(item));
-                instance = instance.Substring(item.Length).TrimStart(',');
-            }
-        }
-        else if (instance[0] == '(')
-        {
-            isOrdered = true;
-            isValue = false;
-            instance = instance.Substring(1, instance.Length - 2);
-            while (instance != "")
-            {
-                string item = findMatchingBrace(instance);
-                list.Add(new UtilCollection(item));
-                instance = instance.Substring(item.Length).TrimStart(',');
-            }
-        }
-        else
-        {
-            isValue = true;
-            value = instance;
-        }
+        UtilCollection parsed = InstanceScanner.Parse(instance);
+        set = parsed.set;
+        list = parsed.list;
+        value = parsed.value;
+        isOrdered = parsed.isOrdered;
+        isValue = parsed.isValue;
+        isMultiset = parsed.isMultiset;
+        counts = parsed.counts;
+        occurrences = parsed.occurrences;
     }
-    
+
+    internal static UtilCollection FromValue(string value)
+    {
+        return new UtilCollection { value = value, isValue = true };
+    }
+
+    // Copies items, like the constructors, so the caller's list can't change this set later.
+    internal static UtilCollection FromSetItems(List<UtilCollection> items)
+    {
+        return new UtilCollection(items.ToHashSet()) { occurrences = new List<UtilCollection>(items) };
+    }
+
     public UtilCollection(HashSet<string> set_)
     {
         isOrdered = false;
         set = new();
         foreach (string i in set_)
         {
-                set.Add(new UtilCollection(i)); 
+            set.Add(new UtilCollection(i));
         }
     }
 
@@ -69,80 +83,54 @@ public class UtilCollection
         set = new();
         foreach (HashSet<string> i in set_)
         {
-                set.Add(new UtilCollection(i)); 
+            set.Add(new UtilCollection(i));
         }
     }
 
+    // Both copy, so later changes to the caller's list or set can't change this collection.
     public UtilCollection(List<UtilCollection> list__)
     {
-        list = list__;
+        list = new List<UtilCollection>(list__);
         isOrdered = true;
     }
 
     public UtilCollection(HashSet<UtilCollection> set__)
     {
-        set = set__;
+        set = new HashSet<UtilCollection>(set__);
         isOrdered = false;
     }
 
-    private string findMatchingBrace(string instance)
-    {
-        Dictionary<char, char> braces = new Dictionary<char, char>
-        {
-            { '(', ')' },
-            { '{', '}' },
-        };
-
-        if (!braces.ContainsKey(instance[0]))
-        {
-            return instance.Split(',')[0];
-        }
-
-        Stack<char> stack = new Stack<char>();
-
-        for (int i = 0; i < instance.Length; i++)
-        {
-            if (braces.ContainsKey(instance[i]))
-            {
-                stack.Push(instance[i]);
-            }
-            else if (braces.Values.Contains(instance[i]))
-            {
-                char openBracket = stack.Pop();
-                if (braces[openBracket] != instance[i])
-                {
-                    throw new Exception("Braces not matched");
-                }
-                if (stack.Count() == 0)
-                {
-                    return instance.Substring(0, i + 1);
-                }
-            }
-        }
-        throw new Exception("Braces not matched");
-    } 
-
     public UtilCollection this[int index]
     {
-        get { 
+        get
+        {
             if (!isOrdered) throw new InvalidOperationException("Cannot index into a set");
-            return list[index]; 
-            }
-        set { 
+            return list[index];
+        }
+        set
+        {
             if (!isOrdered) throw new InvalidOperationException("Cannot index into a set");
-            list[index] = value; 
-            }
+            ThrowIfFrozen();
+            list[index] = value;
+        }
     }
 
     public void Add(UtilCollection item)
     {
-        if(isOrdered)
+        ThrowIfFrozen();
+        if (isMultiset)
+        {
+            list.Add(item);
+            counts![item] = CountOf(item) + 1;
+        }
+        else if (isOrdered)
         {
             list.Add(item);
         }
         else
         {
             set.Add(item);
+            occurrences?.Add(item);
         }
     }
 
@@ -150,7 +138,7 @@ public class UtilCollection
     {
         if (isValue) throw new InvalidOperationException("Cannot enumerate over a value");
 
-        if (isOrdered)
+        if (isOrdered || isMultiset)
             return list.GetEnumerator();
         else
             return set.GetEnumerator();
@@ -182,7 +170,7 @@ public class UtilCollection
 
     public void assertUnordered()
     {
-        if(isOrdered) throw new InvalidOperationException("Ordered");
+        if (isOrdered) throw new InvalidOperationException("Ordered");
     }
 
     public bool IsUnordered()
@@ -199,8 +187,56 @@ public class UtilCollection
         return isValue;
     }
 
+    public bool IsMultiset()
+    {
+        return isMultiset;
+    }
+
+    /// <summary>
+    /// The same elements as a multiset. For a set read from an instance string, this brings back
+    /// the duplicates the set dropped, so <c>{3,3,2,2}</c> gives four elements. Only for sets and multisets.
+    /// </summary>
+    public UtilCollection AsMultiset()
+    {
+        if (isValue || isOrdered) throw new InvalidOperationException("Only a set can be read as a multiset");
+        if (isMultiset) return this;
+
+        UtilCollection multiset = new UtilCollection { isMultiset = true, counts = new() };
+        foreach (UtilCollection item in occurrences ?? set.ToList())
+        {
+            multiset.Add(item);
+        }
+        return multiset;
+    }
+
+    /// <summary>How many times item occurs: 0 or 1 in a set, any number in a multiset or list.</summary>
+    public int CountOf(UtilCollection item)
+    {
+        if (isValue) throw new InvalidOperationException("Cannot count in a value");
+        if (isMultiset) return counts!.TryGetValue(item, out int n) ? n : 0;
+        if (isOrdered) return list.Count(x => x.Equals(item));
+        return set.Contains(item) ? 1 : 0;
+    }
+
+    /// <summary>
+    /// True if every element occurs in other at least as often as it does here, so the multiset
+    /// {7,7} is in {7,7,1} but not in {7,1}. Only for sets and multisets.
+    /// </summary>
+    public bool IsSubsetOf(UtilCollection other)
+    {
+        if (isValue || isOrdered || other.isValue || other.isOrdered)
+            throw new InvalidOperationException("IsSubsetOf needs two sets or multisets");
+
+        IEnumerable<UtilCollection> distinct = isMultiset ? counts!.Keys : set;
+        return distinct.All(item => CountOf(item) <= other.CountOf(item));
+    }
+
     public bool Contains(UtilCollection collection)
     {
+        if (isMultiset)
+        {
+            return counts!.ContainsKey(collection);
+        }
         if (isOrdered)
         {
             return list.Contains(collection);
@@ -212,7 +248,7 @@ public class UtilCollection
     }
     public int Count()
     {
-        if (isOrdered)
+        if (isOrdered || isMultiset)
         {
             return list.Count;
         }
@@ -230,6 +266,17 @@ public class UtilCollection
     public UtilCollection Intersect(UtilCollection other)
     {
         if (isOrdered != other.isOrdered) throw new InvalidOperationException("Can't take the intersection of a set and a list");
+        if (isMultiset != other.isMultiset) throw new InvalidOperationException("Can't take the intersection of a set and a multiset");
+        if (isMultiset)
+        {
+            // Each element occurs as often as in whichever side has fewer.
+            UtilCollection result = new UtilCollection { isMultiset = true, counts = new() };
+            foreach (UtilCollection item in list)
+            {
+                if (result.CountOf(item) < other.CountOf(item)) result.Add(item);
+            }
+            return result;
+        }
         if (!isOrdered)
         {
             return new UtilCollection(set.Intersect(other.set).ToHashSet());
@@ -239,10 +286,22 @@ public class UtilCollection
             throw new NotImplementedException();
         }
     }
-    
+
     public UtilCollection Union(UtilCollection other)
     {
         if (isOrdered != other.isOrdered) throw new InvalidOperationException("Can't take the union of a set and a list");
+        if (isMultiset != other.isMultiset) throw new InvalidOperationException("Can't take the union of a set and a multiset");
+        if (isMultiset)
+        {
+            // Each element occurs as often as in whichever side has more.
+            UtilCollection result = new UtilCollection { isMultiset = true, counts = new() };
+            foreach (UtilCollection item in list) result.Add(item);
+            foreach (UtilCollection item in other.list)
+            {
+                if (result.CountOf(item) < other.CountOf(item)) result.Add(item);
+            }
+            return result;
+        }
         if (!isOrdered)
         {
             return new UtilCollection(set.Union(other.set).ToHashSet());
@@ -258,9 +317,9 @@ public class UtilCollection
         UtilCollection ret = new UtilCollection();
         foreach (UtilCollection a in this)
         {
-            foreach(UtilCollection b in other)
+            foreach (UtilCollection b in other)
             {
-                UtilCollection add = new UtilCollection(new List<UtilCollection>{a,b});
+                UtilCollection add = new UtilCollection(new List<UtilCollection> { a, b });
                 ret.Add(add);
             }
         }
@@ -273,9 +332,19 @@ public class UtilCollection
 
         UtilCollection other = (UtilCollection)obj;
 
+        // A value, a list, a set and a multiset are never equal to each other, even when empty.
+        if (isValue != other.isValue || isOrdered != other.isOrdered || isMultiset != other.isMultiset) return false;
+
         if (isValue)
         {
             return value == other.value;
+        }
+
+        if (isMultiset)
+        {
+            return list.Count == other.list.Count
+                && counts!.Count == other.counts!.Count
+                && counts.All(entry => other.CountOf(entry.Key) == entry.Value);
         }
 
         if (isOrdered)
@@ -294,16 +363,91 @@ public class UtilCollection
         return true;
     }
 
+    // Freezes this collection and everything inside it, so it can be shared between threads, or
+    // kept, knowing nothing will change it. Hashing does the freezing, all the way down.
+    public UtilCollection Freeze()
+    {
+        GetHashCode();
+        return this;
+    }
+
+    public bool IsFrozen()
+    {
+        return frozen;
+    }
+
+    private void ThrowIfFrozen()
+    {
+        if (frozen)
+        {
+            throw new InvalidOperationException(
+                "This collection has been hashed (it is in a set or used as a key) and can't be changed; "
+                + "build it fully before adding it to a set.");
+        }
+    }
+
+    // The first call freezes the collection, so the hash can't change and is worked out only once.
     public override int GetHashCode()
     {
-        return ToString().GetHashCode();
+        if (!frozen)
+        {
+            hashCode = ComputeHashCode();
+            frozen = true;
+        }
+        return hashCode;
+    }
+
+    private int ComputeHashCode()
+    {
+        if (isValue)
+        {
+            return value!.GetHashCode();
+        }
+
+        if (isOrdered)
+        {
+            HashCode hash = new HashCode();
+            hash.Add(isOrdered);
+            foreach (UtilCollection item in list)
+            {
+                hash.Add(item);
+            }
+            return hash.ToHashCode();
+        }
+
+        if (isMultiset)
+        {
+            // Order-independent, like a set, but every occurrence counts.
+            int total = 0;
+            foreach (UtilCollection item in list)
+            {
+                total = unchecked(total + item.GetHashCode());
+            }
+            return HashCode.Combine(isOrdered, isMultiset, list.Count, total);
+        }
+
+        // Sets are equal regardless of order, so combine element hashes with
+        // an order-independent sum rather than hashing ToString(), which
+        // follows insertion order.
+        int sum = 0;
+        foreach (UtilCollection item in set)
+        {
+            sum = unchecked(sum + item.GetHashCode());
+        }
+        return HashCode.Combine(isOrdered, set.Count, sum);
     }
 
     public List<UtilCollection> ToList()
     {
+        if (isMultiset)
+        {
+            // A copy, so changes to it can't get out of step with the counts.
+            return new List<UtilCollection>(list);
+        }
         if (isOrdered)
         {
-            return list;
+            // A copy, so changes to it can't reach a collection that may already be frozen.
+            return new List<UtilCollection>(list);
         }
         else
         {
@@ -317,25 +461,29 @@ public class UtilCollection
         {
             return value!;
         }
-        
-        string str = "";
-        if (isOrdered)
-            str += "(";
-        else
-            str += "{";
 
-        foreach (var item in this) 
+        StringBuilder sb = new StringBuilder();
+        AppendTo(sb);
+        return sb.ToString();
+    }
+
+    // Builds the text in one buffer; adding strings with += copied it once per element.
+    private void AppendTo(StringBuilder sb)
+    {
+        if (isValue)
         {
-            //Console.WriteLine(item.ToString());
-            str += item.ToString() + ",";
+            sb.Append(value);
+            return;
         }
-        str = str.TrimEnd(',');
 
-        if (isOrdered)
-            str += ")";
-        else
-            str += "}";
-
-        return str;
+        sb.Append(isOrdered ? '(' : '{');
+        bool first = true;
+        foreach (UtilCollection item in ToList())
+        {
+            if (!first) sb.Append(',');
+            item.AppendTo(sb);
+            first = false;
+        }
+        sb.Append(isOrdered ? ')' : '}');
     }
 }
