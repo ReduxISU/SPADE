@@ -46,8 +46,7 @@ public partial class collParser : Parser {
 	};
 
 	private static readonly string[] _LiteralNames = {
-		null, "'{'", "'}'", "'('", "')'", "'|'", null, "'not'", null, null, null, 
-		"'int'"
+		null, "'{'", "'}'", "'('", "')'", "'|'", null, "'not'"
 	};
 	private static readonly string[] _SymbolicNames = {
 		null, null, null, null, null, null, "BIN_LOG_OP", "NOT", "DEFINITION", 
