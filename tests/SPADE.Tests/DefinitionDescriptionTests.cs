@@ -170,12 +170,79 @@ public class DefinitionDescriptionTests
     }
 
     [Fact]
-    public void BadDefinitionThrowsOnlyWhenRead()
+    public void BadDefinitionThrowsWhenTheParserIsMade()
     {
-        StringParser parser = new("not a definition");
-
-        FormatException e = Assert.Throws<FormatException>(() => parser.Definition);
+        FormatException e = Assert.Throws<FormatException>(() => new StringParser("not a definition"));
         Assert.Contains("not a definition", e.Message);
+    }
+
+    // A malformed definition string is rejected, not guessed at (#4).
+    [Theory]
+    [InlineData("{N | N is set", "Definition string \"{N | N is set\" can't be read: mismatched input '<EOF>' expecting {'}', CM} at position 14")]
+    [InlineData("{N | N is set#}", "Definition string \"{N | N is set#}\" can't be read: token recognition error at: '#' at position 14")]
+    [InlineData("{N | N is set}}", "Definition string \"{N | N is set}}\" can't be read: extraneous input '}' expecting <EOF> at position 15")]
+    public void MalformedDefinitionThrowsWithPosition(string definition, string message)
+    {
+        FormatException e = Assert.Throws<FormatException>(() => new StringParser(definition));
+        Assert.Equal(message, e.Message);
+    }
+
+    [Theory]
+    [InlineData("{N | N is set")]
+    [InlineData("{N | N is set#}")]
+    [InlineData("{N | N is set}}")]
+    [InlineData("not a definition")]
+    public void StringParserAndDefinitionGiveTheSameError(string definition)
+    {
+        FormatException fromParser = Assert.Throws<FormatException>(() => new StringParser(definition));
+        FormatException fromDefinition = Assert.Throws<FormatException>(() => DefinitionDescription.Parse(definition));
+        Assert.Equal(fromDefinition.Message, fromParser.Message);
+    }
+
+    [Fact]
+    public void MalformedDefinitionPrintsNothing()
+    {
+        TextWriter oldOut = Console.Out;
+        TextWriter oldError = Console.Error;
+        StringWriter output = new();
+        try
+        {
+            Console.SetOut(output);
+            Console.SetError(output);
+            Assert.Throws<FormatException>(() => new StringParser("{N | N is set#}"));
+            Assert.Throws<FormatException>(() => new StringParser("{N | N is set"));
+        }
+        finally
+        {
+            Console.SetOut(oldOut);
+            Console.SetError(oldError);
+        }
+        Assert.Equal("", output.ToString());
+    }
+
+    [Theory]
+    [InlineData("{N | N is set}", "{1,2}")]
+    [InlineData("{(N,E) | N is set, E subset N unorderedcross N}", "({1,2},{{1,2}})")]
+    [InlineData("{((N,E),K) | N is set, E subset N unorderedcross N, K is int}", "(({1,2},{{1,2}}),1)")]
+    [InlineData("{(N,E) | N is set, E subset {(e, w) | e is N unorderedcross N, w is int}}", "({1,2},{({1,2},3)})")]
+    public void ValidDefinitionsStillConstructAndParse(string definition, string instance)
+    {
+        StringParser parser = new(definition);
+        parser.parse(instance);
+        Assert.NotEmpty(parser.map);
+    }
+
+    [Fact]
+    public void OneParserParsesSeveralInstances()
+    {
+        StringParser parser = new("{(N,E) | N is set, E subset N unorderedcross N}");
+
+        parser.parse("({1,2},{{1,2}})");
+        Assert.Equal(new UtilCollection("{1,2}"), parser["N"]);
+
+        parser.parse("({a,b,c},{{a,c}})");
+        Assert.Equal(new UtilCollection("{a,b,c}"), parser["N"]);
+        Assert.Equal(new UtilCollection("{{a,c}}"), parser["E"]);
     }
 
     [Fact]
