@@ -160,6 +160,37 @@ public class UtilCollectionFreezeTests
     }
 
     [Fact]
+    public void FreezeLocksTheCollectionAndEverythingInside()
+    {
+        UtilCollection child = C("(1,2)");
+        UtilCollection list = new UtilCollection(new List<UtilCollection> { child, C("{3}") });
+
+        Assert.Same(list, list.Freeze());
+        Assert.True(list.IsFrozen());
+        Assert.True(child.IsFrozen());
+        Assert.Throws<InvalidOperationException>(() => list.Add(C("4")));
+        Assert.Throws<InvalidOperationException>(() => child[0] = C("0"));
+        Assert.Equal("((1,2),{3})", list.ToString());
+    }
+
+    [Fact]
+    public void FreezeTwiceIsHarmlessAndKeepsTheHash()
+    {
+        UtilCollection set = C("{1,{2,3}}");
+        int hash = set.Freeze().GetHashCode();
+
+        Assert.Equal(hash, set.Freeze().GetHashCode());
+        Assert.Equal(C("{{3,2},1}").GetHashCode(), hash);
+    }
+
+    [Fact]
+    public void NewCollectionsAreNotFrozen()
+    {
+        Assert.False(C("{1,2}").IsFrozen());
+        Assert.False(C("(1,2)").IsFrozen());
+    }
+
+    [Fact]
     public void EqualsDoesNotFreeze()
     {
         UtilCollection set = C("{1}");

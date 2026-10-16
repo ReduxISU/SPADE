@@ -74,6 +74,8 @@ Adds a UtilCollection object to the collection. Throws `InvalidOperationExceptio
 ### Collections freeze once hashed
 A `HashSet` or `Dictionary` files each element under the hash code it had when it went in. If the element changed afterwards, it would sit under a stale hash: `Contains` would miss it and duplicates could slip in, with no error. So the first time a UtilCollection is hashed, it freezes, and `Add` or assigning to an index throws `InvalidOperationException`. That happens when it is added to a set (including a UtilCollection set), used as a dictionary key, or put inside a list or set that is itself hashed, since hashing a collection hashes everything inside it. Multisets freeze the same way.
 
+To freeze a collection on purpose, call `Freeze()`. It freezes the collection and everything inside it, and returns the collection, so `new UtilCollection(text).Freeze()` works. `IsFrozen()` says whether a collection is frozen.
+
 Build each collection fully, then add it to a set:
 
 ```c#
