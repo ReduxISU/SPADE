@@ -192,6 +192,33 @@ public class DefinitionDescriptionTests
     }
 
     [Fact]
+    public void PartToStringShowsKindAndWhatItIsOf()
+    {
+        DefinitionDescription d = Describe("{(N,E) | N is set, E subset N cross N}");
+
+        Assert.Equal("N: Set", d["N"].ToString());
+        Assert.Equal("E: Subset of N cross N", d["E"].ToString());
+    }
+
+    [Fact]
+    public void ListOfValuesIsNotADefinition()
+    {
+        FormatException e = Assert.Throws<FormatException>(() => Describe("{a,b}"));
+        Assert.Equal("Definition string \"{a,b}\" is a list of values, not a format followed by |", e.Message);
+    }
+
+    // Lexer errors (a character the grammar has no token for) and parser errors both give the position.
+    [Theory]
+    [InlineData("{N | N is set#}", "token recognition error at: '#' at position 14")]
+    [InlineData("{N | N is set", "mismatched input '<EOF>' expecting {'}', CM} at position 14")]
+    [InlineData("{N | N is set}}", "extraneous input '}' expecting <EOF> at position 15")]
+    public void SyntaxErrorsGiveThePosition(string grammar, string reason)
+    {
+        FormatException e = Assert.Throws<FormatException>(() => Describe(grammar));
+        Assert.Equal($"Definition string \"{grammar}\" can't be read: {reason}", e.Message);
+    }
+
+    [Fact]
     public void ParseDirectlyMatchesTheProperty()
     {
         Assert.Equal("(N,E)", DefinitionDescription.Parse("{(N,E) | N is set, E subset N cross N}").Outline);
