@@ -63,7 +63,7 @@ catch (SpadeParseException e)
 
 A failure inside a nested set, like `w is int` in `E subset {(e,w) | ...}`, belongs to the outer part (`E`) and the member of it that failed. `MissingValue` and `ExpectedIn` are null when the set isn't built from parts, as in `S subset int`, and all four are null for text that can't be read or a shape that doesn't match the definition string.
 
-Any other exception type means a bug in SPADE or in the definition string, not bad input.
+Any other exception type means a bug in SPADE or in the definition string, not bad input. A definition string that can't be read throws `FormatException` as soon as the `StringParser` is created, before any instance is parsed.
 
 ## Describing a definition string
 
@@ -88,4 +88,4 @@ Console.WriteLine(d["E"].Constraints[0]); // E subset N unorderedcross N
 
 Each part has a `Name`, a `Kind` (`Set`, `Multiset`, `List`, `Int`, `String`, `Subset`, `Member`, or `Any` when nothing says what it is), `Of` (what it is a subset or member of, as written), `Path` (where it sits in the outline), and `Constraints` (every constraint naming it, as written). Only the outer format's names are parts; names inside a nested set, like `a` in `S subset {a | a subset U}`, are not.
 
-`Definition` is read the first time you use it, so creating a `StringParser` never throws. If the definition string can't be read, `Definition` throws a `FormatException` naming it. `DefinitionDescription.Parse(definitionString)` does the same without a `StringParser`.
+Creating a `StringParser` reads its definition string, so a malformed one, such as `{N | N is set` with its closing brace missing, throws a `FormatException` naming it and the position of the first error, instead of being guessed at. `Definition` is worked out the first time you use it. `DefinitionDescription.Parse(definitionString)` reads a definition string the same way without a `StringParser`, and throws the same `FormatException`.
