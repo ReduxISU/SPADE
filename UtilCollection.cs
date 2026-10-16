@@ -19,7 +19,9 @@ public class UtilCollection
     // had when it went in, so changing the element (or anything inside it) afterwards would leave
     // it under a stale hash, and lookups would quietly miss it. Once frozen, every change throws.
     // Hashing a list or set hashes its elements, so they freeze too, all the way down.
-    private bool frozen;
+    // volatile: GetHashCode writes hashCode before frozen, so a thread that sees frozen also sees
+    // the hash. A frozen collection is safe to read from several threads.
+    private volatile bool frozen;
     private int hashCode;
 
     public UtilCollection()
