@@ -10,18 +10,19 @@ using SPADE.Grammar.Enums;
 
 namespace SPADE.Grammar;
 
-class codeGen : IcollListener {
+class codeGen : IcollListener
+{
     public Dictionary<string, UtilCollection> map;
 
     public Stack<FormatDescriptor> formatStack;
-    public SetDescriptor ?setDescriptor;
+    public SetDescriptor? setDescriptor;
 
     public Stack<SetDescriptor> setDescriptorStack;
 
     public Stack<ConstraintDescriptor> constraintDescriptorStack;
     public Stack<Stack<ConstraintDescriptor>> constraintDescriptorStackStack;
 
-    public codeGen() : base() 
+    public codeGen() : base()
     {
         map = new();
         formatStack = new();
@@ -33,6 +34,12 @@ class codeGen : IcollListener {
     public void Parse(UtilCollection utilCollection)
     {
         setDescriptor!.isMember(utilCollection);
+    }
+
+    // A rule's text as written in the definition string, spacing included, for error messages.
+    private static string SourceText(ParserRuleContext context)
+    {
+        return context.Start.InputStream.GetText(Interval.Of(context.Start.StartIndex, context.Stop.StopIndex));
     }
 
     /// <summary>
@@ -88,10 +95,10 @@ class codeGen : IcollListener {
             List<FormatDescriptor> lst = new();
             for (int i = 0; i < context.format().Length; i++)
             {
-                lst.Add(formatStack.Pop());           
+                lst.Add(formatStack.Pop());
             }
             lst.Reverse(); // have to reverse the list, since the leftmost should be the one that was popped first
-            formatStack.Push(new FormatDescriptor(lst));
+            formatStack.Push(new FormatDescriptor(lst, SourceText(context)));
         }
         if (context.TERM() != null)
         {
@@ -123,11 +130,18 @@ class codeGen : IcollListener {
     {
         if (context.@object().BUILT_IN() != null)
         {
-            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!));
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!, SourceText(context)));
+        }
+        else if (context.@object().BUILT_IN_SET() != null && context.DEFINITION().ToString() == "is")
+        {
+            // "N is int" and "N is number" are type checks, like "N is set". The set descriptor
+            // pushed for them is only needed by other definitions, such as "S subset int".
+            setDescriptorStack.Pop();
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN_SET().ToString()!, SourceText(context)));
         }
         else
         {
-            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, setDescriptorStack.Pop()));
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, setDescriptorStack.Pop(), SourceText(context)));
         }
     }
     /// <summary>
@@ -150,7 +164,8 @@ class codeGen : IcollListener {
 
         if (context.BUILT_IN_SET() != null)
         {
-            setDescriptorStack.Push(new SetDescriptor(map, BuiltInSet.integers));
+            BuiltInSet builtInSet = context.BUILT_IN_SET().GetText() == "number" ? BuiltInSet.numbers : BuiltInSet.integers;
+            setDescriptorStack.Push(new SetDescriptor(map, builtInSet));
         }
 
         if (context.TERM() != null)
