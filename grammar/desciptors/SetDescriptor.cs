@@ -10,7 +10,7 @@ namespace SPADE.Grammar.descriptor;
 
 class SetDescriptor
 {
-    public Func<UtilCollection,bool> isMember;
+    public Func<UtilCollection, bool> isMember;
 
     public Func<UtilCollection> genSet;
 
@@ -23,7 +23,7 @@ class SetDescriptor
         genSet = () => new UtilCollection("");
     }
 
-    public SetDescriptor(Dictionary<String, UtilCollection> _map, Func<UtilCollection,bool> _isMember, Func<UtilCollection> _genSet)
+    public SetDescriptor(Dictionary<String, UtilCollection> _map, Func<UtilCollection, bool> _isMember, Func<UtilCollection> _genSet)
     {
         map = _map;
         isMember = _isMember;
@@ -60,7 +60,7 @@ class SetDescriptor
             {
                 constraintDescriptor.check(map);
             }
-            return true; 
+            return true;
         };
 
         genSet = () => throw new NotImplementedException("generating every set descriptor not implemented");
@@ -75,26 +75,30 @@ class SetDescriptor
 
     public SetDescriptor Cross(SetDescriptor other)
     {
-        Func<UtilCollection, bool> _isMember = (a) => isMember(a[0]) && other.isMember(a[1]);
+        Func<UtilCollection, bool> _isMember = (a) =>
+            a.IsOrdered() && a.Count() == 2 && isMember(a[0]) && other.isMember(a[1]);
         Func<UtilCollection> _genSet = () => genSet().Cross(other.genSet());
         return new SetDescriptor(map, _isMember, _genSet);
     }
 
     public SetDescriptor UnorderedCross(SetDescriptor other)
     {
-        Func<UtilCollection, bool> _isMember = (a) => 
+        Func<UtilCollection, bool> _isMember = (a) =>
         {
+            // Each member is a set of nodes, like the edge {a,b}. A list such as (a,b)
+            // is an ordered pair and belongs to cross, and a plain value is not an edge.
+            if (a.IsValue() || a.IsOrdered()) return false;
+
             foreach (UtilCollection item in a)
             {
-                if (!item.IsOrdered()) return false;
                 if (!isMember(item) && !other.isMember(item))
                 {
                     return false;
                 }
-            } 
+            }
             return true;
         };
-        Func<UtilCollection> _genSet = () => 
+        Func<UtilCollection> _genSet = () =>
         {
             UtilCollection set = new("{}");
             foreach (UtilCollection first in genSet())
@@ -114,7 +118,7 @@ class SetDescriptor
 
     public SetDescriptor Union(SetDescriptor other)
     {
-        
+
         Func<UtilCollection, bool> _isMember = (a) => isMember(a) || other.isMember(a);
         Func<UtilCollection> _genSet = () => genSet().Union(other.genSet());
         return new SetDescriptor(map, _isMember, _genSet);

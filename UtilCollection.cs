@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Runtime.Serialization;
+using System.Text;
 
 namespace SPADE;
 
@@ -14,52 +15,47 @@ public class UtilCollection
     private bool isOrdered;
     private bool isValue;
 
+    // Set the first time this collection is hashed. A HashSet keeps an element under the hash it
+    // had when it went in, so changing the element (or anything inside it) afterwards would leave
+    // it under a stale hash, and lookups would quietly miss it. Once frozen, every change throws.
+    // Hashing a list or set hashes its elements, so they freeze too, all the way down.
+    // volatile: GetHashCode writes hashCode before frozen, so a thread that sees frozen also sees
+    // the hash. A frozen collection is safe to read from several threads.
+    private volatile bool frozen;
+    private int hashCode;
 
     public UtilCollection()
     {
 
     }
 
+    /// <summary>
+    /// Reads an instance string such as <c>({1,2},{(1,2)})</c>. Throws
+    /// <see cref="SpadeParseException"/> if it isn't a well-formed value, set or list.
+    /// See <see cref="InstanceScanner"/> for how whitespace is handled.
+    /// </summary>
     public UtilCollection(string instance)
     {
-        if (instance[0] == '{')
-        {
-            isOrdered = false;
-            isValue = false;
-            instance = instance.Substring(1, instance.Length - 2);
-            while (instance != "")
-            {
-                string item = findMatchingBrace(instance);
-                set.Add(new UtilCollection(item));
-                instance = instance.Substring(item.Length).TrimStart(',');
-            }
-        }
-        else if (instance[0] == '(')
-        {
-            isOrdered = true;
-            isValue = false;
-            instance = instance.Substring(1, instance.Length - 2);
-            while (instance != "")
-            {
-                string item = findMatchingBrace(instance);
-                list.Add(new UtilCollection(item));
-                instance = instance.Substring(item.Length).TrimStart(',');
-            }
-        }
-        else
-        {
-            isValue = true;
-            value = instance;
-        }
+        UtilCollection parsed = InstanceScanner.Parse(instance);
+        set = parsed.set;
+        list = parsed.list;
+        value = parsed.value;
+        isOrdered = parsed.isOrdered;
+        isValue = parsed.isValue;
     }
-    
+
+    internal static UtilCollection FromValue(string value)
+    {
+        return new UtilCollection { value = value, isValue = true };
+    }
+
     public UtilCollection(HashSet<string> set_)
     {
         isOrdered = false;
         set = new();
         foreach (string i in set_)
         {
-                set.Add(new UtilCollection(i)); 
+            set.Add(new UtilCollection(i));
         }
     }
 
@@ -69,74 +65,42 @@ public class UtilCollection
         set = new();
         foreach (HashSet<string> i in set_)
         {
-                set.Add(new UtilCollection(i)); 
+            set.Add(new UtilCollection(i));
         }
     }
 
+    // Both copy, so later changes to the caller's list or set can't change this collection.
     public UtilCollection(List<UtilCollection> list__)
     {
-        list = list__;
+        list = new List<UtilCollection>(list__);
         isOrdered = true;
     }
 
     public UtilCollection(HashSet<UtilCollection> set__)
     {
-        set = set__;
+        set = new HashSet<UtilCollection>(set__);
         isOrdered = false;
     }
 
-    private string findMatchingBrace(string instance)
-    {
-        Dictionary<char, char> braces = new Dictionary<char, char>
-        {
-            { '(', ')' },
-            { '{', '}' },
-        };
-
-        if (!braces.ContainsKey(instance[0]))
-        {
-            return instance.Split(',')[0];
-        }
-
-        Stack<char> stack = new Stack<char>();
-
-        for (int i = 0; i < instance.Length; i++)
-        {
-            if (braces.ContainsKey(instance[i]))
-            {
-                stack.Push(instance[i]);
-            }
-            else if (braces.Values.Contains(instance[i]))
-            {
-                char openBracket = stack.Pop();
-                if (braces[openBracket] != instance[i])
-                {
-                    throw new Exception("Braces not matched");
-                }
-                if (stack.Count() == 0)
-                {
-                    return instance.Substring(0, i + 1);
-                }
-            }
-        }
-        throw new Exception("Braces not matched");
-    } 
-
     public UtilCollection this[int index]
     {
-        get { 
+        get
+        {
             if (!isOrdered) throw new InvalidOperationException("Cannot index into a set");
-            return list[index]; 
-            }
-        set { 
+            return list[index];
+        }
+        set
+        {
             if (!isOrdered) throw new InvalidOperationException("Cannot index into a set");
-            list[index] = value; 
-            }
+            ThrowIfFrozen();
+            list[index] = value;
+        }
     }
 
     public void Add(UtilCollection item)
     {
-        if(isOrdered)
+        ThrowIfFrozen();
+        if (isOrdered)
         {
             list.Add(item);
         }
@@ -182,7 +146,7 @@ public class UtilCollection
 
     public void assertUnordered()
     {
-        if(isOrdered) throw new InvalidOperationException("Ordered");
+        if (isOrdered) throw new InvalidOperationException("Ordered");
     }
 
     public bool IsUnordered()
@@ -239,7 +203,7 @@ public class UtilCollection
             throw new NotImplementedException();
         }
     }
-    
+
     public UtilCollection Union(UtilCollection other)
     {
         if (isOrdered != other.isOrdered) throw new InvalidOperationException("Can't take the union of a set and a list");
@@ -258,9 +222,9 @@ public class UtilCollection
         UtilCollection ret = new UtilCollection();
         foreach (UtilCollection a in this)
         {
-            foreach(UtilCollection b in other)
+            foreach (UtilCollection b in other)
             {
-                UtilCollection add = new UtilCollection(new List<UtilCollection>{a,b});
+                UtilCollection add = new UtilCollection(new List<UtilCollection> { a, b });
                 ret.Add(add);
             }
         }
@@ -272,6 +236,9 @@ public class UtilCollection
         if (obj == null || GetType() != obj.GetType()) return false;
 
         UtilCollection other = (UtilCollection)obj;
+
+        // A value, a list and a set are never equal to each other, even when empty.
+        if (isValue != other.isValue || isOrdered != other.isOrdered) return false;
 
         if (isValue)
         {
@@ -294,16 +261,75 @@ public class UtilCollection
         return true;
     }
 
+    // Freezes this collection and everything inside it, so it can be shared between threads, or
+    // kept, knowing nothing will change it. Hashing does the freezing, all the way down.
+    public UtilCollection Freeze()
+    {
+        GetHashCode();
+        return this;
+    }
+
+    public bool IsFrozen()
+    {
+        return frozen;
+    }
+
+    private void ThrowIfFrozen()
+    {
+        if (frozen)
+        {
+            throw new InvalidOperationException(
+                "This collection has been hashed (it is in a set or used as a key) and can't be changed; "
+                + "build it fully before adding it to a set.");
+        }
+    }
+
+    // The first call freezes the collection, so the hash can't change and is worked out only once.
     public override int GetHashCode()
     {
-        return ToString().GetHashCode();
+        if (!frozen)
+        {
+            hashCode = ComputeHashCode();
+            frozen = true;
+        }
+        return hashCode;
+    }
+
+    private int ComputeHashCode()
+    {
+        if (isValue)
+        {
+            return value!.GetHashCode();
+        }
+
+        if (isOrdered)
+        {
+            HashCode hash = new HashCode();
+            hash.Add(isOrdered);
+            foreach (UtilCollection item in list)
+            {
+                hash.Add(item);
+            }
+            return hash.ToHashCode();
+        }
+
+        // Sets are equal regardless of order, so combine element hashes with
+        // an order-independent sum rather than hashing ToString(), which
+        // follows insertion order.
+        int sum = 0;
+        foreach (UtilCollection item in set)
+        {
+            sum = unchecked(sum + item.GetHashCode());
+        }
+        return HashCode.Combine(isOrdered, set.Count, sum);
     }
 
     public List<UtilCollection> ToList()
     {
         if (isOrdered)
         {
-            return list;
+            // A copy, so changes to it can't reach a collection that may already be frozen.
+            return new List<UtilCollection>(list);
         }
         else
         {
@@ -317,25 +343,29 @@ public class UtilCollection
         {
             return value!;
         }
-        
-        string str = "";
-        if (isOrdered)
-            str += "(";
-        else
-            str += "{";
 
-        foreach (var item in this) 
+        StringBuilder sb = new StringBuilder();
+        AppendTo(sb);
+        return sb.ToString();
+    }
+
+    // Builds the text in one buffer; adding strings with += copied it once per element.
+    private void AppendTo(StringBuilder sb)
+    {
+        if (isValue)
         {
-            //Console.WriteLine(item.ToString());
-            str += item.ToString() + ",";
+            sb.Append(value);
+            return;
         }
-        str = str.TrimEnd(',');
 
-        if (isOrdered)
-            str += ")";
-        else
-            str += "}";
-
-        return str;
+        sb.Append(isOrdered ? '(' : '{');
+        bool first = true;
+        foreach (UtilCollection item in ToList())
+        {
+            if (!first) sb.Append(',');
+            item.AppendTo(sb);
+            first = false;
+        }
+        sb.Append(isOrdered ? ')' : '}');
     }
 }
