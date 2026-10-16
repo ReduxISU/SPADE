@@ -145,6 +145,21 @@ public class UtilCollectionFreezeTests
     }
 
     [Fact]
+    public void HashingFromManyThreadsAgrees()
+    {
+        // Each round starts unfrozen, so the threads race to compute and cache the hash.
+        for (int round = 0; round < 200; round++)
+        {
+            UtilCollection set = C("{({1,2},{3,4}),({5,6},(7,8)),9,{10,{11,12}}}");
+            int expected = C("{({1,2},{3,4}),({5,6},(7,8)),9,{10,{11,12}}}").GetHashCode();
+            int[] seen = new int[8];
+            Parallel.For(0, seen.Length, i => seen[i] = set.GetHashCode());
+
+            Assert.All(seen, h => Assert.Equal(expected, h));
+        }
+    }
+
+    [Fact]
     public void EqualsDoesNotFreeze()
     {
         UtilCollection set = C("{1}");
