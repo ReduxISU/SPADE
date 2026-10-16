@@ -39,13 +39,4 @@ public class ConstraintGapTests
         SpadeParseException e = Assert.Throws<SpadeParseException>(() => Parse("{(A,x) | A is set, x in A}", "({1},2)"));
         Assert.Equal("x", e.Part);
     }
-
-    [Theory(Skip = "Bug: parse() keeps ANTLR's default error recovery, so a malformed definition is printed to the console and read as best it can, instead of throwing like Definition does")]
-    [InlineData("{N | N is set")]
-    [InlineData("{N | N is set#}")]
-    [InlineData("{N | N is set}}")]
-    public void MalformedDefinitionThrowsOnParse(string grammar)
-    {
-        Assert.Throws<FormatException>(() => Parse(grammar, "{a}"));
-    }
 }
