@@ -1,0 +1,24 @@
+{
+  "name": "SPADE .NET Dev Container",
+  // SDK 10 reads SPADE.slnx (the .slnx format needs SDK 9.0.200+) and still builds the net6.0 library.
+  "image": "mcr.microsoft.com/dotnet/sdk:10.0",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode",
+      "installZsh": false,
+      "upgradePackages": false
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": { "moby": false },
+    "ghcr.io/reduxisu/features/rbs:1": {}
+  },
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp"
+      ]
+    }
+  },
+  "postStartCommand": "if [ \"$(stat -c %U /workspaces/SPADE)\" != \"vscode\" ]; then sudo chown -R vscode:vscode /workspaces/SPADE; fi",
+  "postCreateCommand": "dotnet --list-sdks && dotnet --list-runtimes"
+}

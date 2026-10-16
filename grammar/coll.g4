@@ -41,9 +41,11 @@ BIN_OP    : 'union'
           | 'unorderedcross'
           ;
 BUILT_IN  : 'set' 
+          | 'multiset' 
           | 'list' 
           | 'graph' 
           | 'weightedGraph' 
+          | 'string' 
 		  ;
 BUILT_IN_SET: 'int';
 TERM      : [a-zA-Z0-9.]+ ;
