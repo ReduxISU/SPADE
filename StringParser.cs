@@ -7,11 +7,12 @@ using Antlr4.Runtime.Tree;
 using SPADE.Grammar;
 
 namespace SPADE;
+
 public class StringParser
 {
     readonly string format;
     public Dictionary<string, UtilCollection> map = new();
-    
+
     private bool hasParsed;
 
     public StringParser(string f)
@@ -24,7 +25,7 @@ public class StringParser
     {
         hasParsed = true;
         AntlrInputStream stream = new AntlrInputStream(format);
-        collLexer lex =  new collLexer(stream);
+        collLexer lex = new collLexer(stream);
         CommonTokenStream tokens = new CommonTokenStream(lex);
         collParser parser = new collParser(tokens);
 
@@ -35,7 +36,7 @@ public class StringParser
         gen.Parse(new UtilCollection(instance));
 
 
-        map = gen.map; 
+        map = gen.map;
 
     }
 

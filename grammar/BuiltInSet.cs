@@ -1,2 +1,3 @@
 namespace SPADE.Grammar.Enums;
-enum BuiltInSet {integers}
+
+enum BuiltInSet { integers }
