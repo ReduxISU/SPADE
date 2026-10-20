@@ -41,6 +41,7 @@ BIN_OP    : 'union'
           | 'unorderedcross'
           ;
 BUILT_IN  : 'set' 
+          | 'multiset' 
           | 'list' 
           | 'graph' 
           | 'weightedGraph' 
