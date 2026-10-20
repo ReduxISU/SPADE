@@ -49,6 +49,27 @@ for `{1,2`. Its `Position` (counting from 1), `Expected` and `Found` properties 
 
 Sets and lists can be nested up to 256 levels deep. Deeper input is rejected with a `SpadeParseException` rather than risking a stack overflow.
 
+## Matrices and tensors
+A matrix is written as a list of rows, each row a list of values, row-major: `((1,2,3),(4,5,6))` is a matrix with 2 rows and 3 columns. A tensor nests one level further for each extra dimension, so `(((1,2),(3,4)),((5,6),(7,8)))` has shape 2×2×2. There are no new separators, and the [whitespace](#whitespace) rules let a matrix be spread over lines:
+
+```
+(
+  (1, 2, 3),
+  (4, 5, 6)
+)
+```
+
+When the definition string says a part is a matrix or tensor (see [matrices and tensors](DefinitionString.md#matrices-and-tensors)), every row at the same depth must have the same length, and every element must be a single value of the element type.
+
+Empty and small cases:
+
+- `((7))` is a 1×1 matrix, and `(5)` a list of one.
+- `()` read as a matrix has no rows. Its shape is 0×0: when a dimension is empty, every dimension after it can't be read, so it is reported as 0 and its size isn't checked against a constant or name.
+- `((),())` is a matrix with 2 rows and no columns, shape 2×0.
+- A row that is empty among full ones, `((1,2),())`, is not rectangular.
+
+Two tensors are equal when their element type, shape and every element's text are the same, so `2` and `2.0` are different numbers, as they are in a set.
+
 ## Multisets
 A multiset is written with curly braces, like a set: `{3,3,2,2}`. Read on its own, that is a set, and the repeated elements are dropped, leaving `{3,2}`. When the definition string marks the collection with `is multiset`, every element is kept, so `{3,3,2,2}` has four elements.
 

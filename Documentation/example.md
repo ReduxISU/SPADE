@@ -86,6 +86,8 @@ foreach (DefinitionPart part in d.Parts)
 Console.WriteLine(d["E"].Constraints[0]); // E subset N unorderedcross N
 ```
 
-Each part has a `Name`, a `Kind` (`Set`, `Multiset`, `List`, `Int`, `Number`, `String`, `Subset`, `Member`, or `Any` when nothing says what it is), `Of` (what it is a subset or member of, as written), `Path` (where it sits in the outline), and `Constraints` (every constraint naming it, as written). Only the outer format's names are parts; names inside a nested set, like `a` in `S subset {a | a subset U}`, are not.
+Each part has a `Name`, a `Kind` (`Set`, `Multiset`, `List`, `Int`, `Number`, `String`, `Tensor`, `Subset`, `Member`, or `Any` when nothing says what it is), `Of` (what it is a subset or member of, as written), `Path` (where it sits in the outline), and `Constraints` (every constraint naming it, as written).
+
+A part declared with an element type, "d is list int size m", "C is matrix int size m n" or "T is tensor 3 number", also has an `ElementType` (`Int`, `Number` or `String`), a `Rank` (1 for a list, 2 for a matrix) and `Sizes`, the size of each dimension as written: `["m", "n"]` for C, `["9", "9"]` for "G is matrix int size 9 9", and empty when the sizes are free. A matrix's `Kind` is `Tensor` with `Rank` 2. For other parts `ElementType` and `Rank` are null and `Sizes` is empty. `ToString()` gives, for example, `C: Tensor 2 int size m n`. Only the outer format's names are parts; names inside a nested set, like `a` in `S subset {a | a subset U}`, are not.
 
 Creating a `StringParser` reads its definition string, so a malformed one, such as `{N | N is set` with its closing brace missing, throws a `FormatException` naming it and the position of the first error, instead of being guessed at. `Definition` is worked out the first time you use it. `DefinitionDescription.Parse(definitionString)` reads a definition string the same way without a `StringParser`, and throws the same `FormatException`.
