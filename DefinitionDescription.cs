@@ -2,6 +2,7 @@ using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 
 using SPADE.Grammar;
+using SPADE.Grammar.descriptor;
 
 namespace SPADE;
 
@@ -19,7 +20,7 @@ public enum PartKind
     /// <summary>"is multiset".</summary>
     Multiset,
 
-    /// <summary>"is list".</summary>
+    /// <summary>"is list", or "is list int" with an element type (see <see cref="DefinitionPart.ElementType"/>).</summary>
     List,
 
     /// <summary>"is int".</summary>
@@ -30,6 +31,12 @@ public enum PartKind
 
     /// <summary>"is string": a single value, not a set, list or multiset.</summary>
     String,
+
+    /// <summary>
+    /// "is matrix int" or "is tensor 3 int": a rectangular n-dimensional value (#30). A matrix is a tensor of
+    /// <see cref="DefinitionPart.Rank"/> 2; <see cref="DefinitionPart.ElementType"/> and <see cref="DefinitionPart.Sizes"/> say the rest.
+    /// </summary>
+    Tensor,
 
     /// <summary>"subset X", with no "is" type; <see cref="DefinitionPart.Of"/> holds X.</summary>
     Subset,
@@ -61,18 +68,45 @@ public class DefinitionPart
     /// <summary>Every top-level constraint that names this part, as written, in definition order.</summary>
     public IReadOnlyList<string> Constraints { get; }
 
-    internal DefinitionPart(string name, PartKind kind, string? of, IReadOnlyList<int> path, IReadOnlyList<string> constraints)
+    /// <summary>
+    /// The type of every element, for a part declared "is list int", "is matrix number" or "is tensor 3 string" (#30);
+    /// null for any other part.
+    /// </summary>
+    public ScalarType? ElementType { get; }
+
+    /// <summary>The number of dimensions when <see cref="ElementType"/> is set: 1 for "list int", 2 for "matrix int", n for "tensor n int"; else null.</summary>
+    public int? Rank { get; }
+
+    /// <summary>
+    /// The size of each dimension as written after "size", outermost first: a name such as "m", or a whole-number
+    /// constant such as "9". Empty when the sizes are free, read from the instance. A name used more than once,
+    /// here or in another part, must have the same value everywhere.
+    /// </summary>
+    public IReadOnlyList<string> Sizes { get; }
+
+    internal DefinitionPart(string name, PartKind kind, string? of, IReadOnlyList<int> path, IReadOnlyList<string> constraints, ShapeDescriptor? shape = null)
     {
         Name = name;
         Kind = kind;
         Of = of;
         Path = path;
         Constraints = constraints;
+        ElementType = shape?.ElementType;
+        Rank = shape?.Rank;
+        Sizes = shape?.Sizes ?? Array.Empty<string>();
     }
 
+    /// <summary>E.g. "E: Subset of N cross N", "d: List int size m" or "C: Tensor 2 int size m n".</summary>
     public override string ToString()
     {
-        return Of == null ? $"{Name}: {Kind}" : $"{Name}: {Kind} of {Of}";
+        string kind = Kind.ToString();
+        if (ElementType != null)
+        {
+            string element = ElementType.Value.ToString().ToLowerInvariant();
+            kind = Kind == PartKind.Tensor ? $"{kind} {Rank} {element}" : $"{kind} {element}";
+            if (Sizes.Count > 0) kind += " size " + string.Join(" ", Sizes);
+        }
+        return Of == null ? $"{Name}: {kind}" : $"{Name}: {kind} of {Of}";
     }
 }
 
@@ -169,8 +203,8 @@ public class DefinitionDescription
         foreach ((string name, List<int> path) in names)
         {
             if (!seen.Add(name)) continue;
-            (PartKind kind, string? of) = Classify(simple[name], nameSet);
-            parts.Add(new DefinitionPart(name, kind, of, path.AsReadOnly(), constraints[name].AsReadOnly()));
+            (PartKind kind, string? of, ShapeDescriptor? shape) = Classify(simple[name], nameSet, definition);
+            parts.Add(new DefinitionPart(name, kind, of, path.AsReadOnly(), constraints[name].AsReadOnly(), shape));
         }
 
         return new DefinitionDescription(outline, parts);
@@ -211,27 +245,38 @@ public class DefinitionDescription
             Subjects(inner, subjects);
     }
 
-    // An "is set/multiset/list/int/number/string" wins the kind; Of comes from the first subset, else the first membership.
-    private static (PartKind, string?) Classify(List<collParser.ConstraintContext> constraints, HashSet<string> names)
+    // An "is set/multiset/list/int/number/string/matrix/tensor" wins the kind; Of comes from the first subset, else the first membership.
+    private static (PartKind, string?, ShapeDescriptor?) Classify(List<collParser.ConstraintContext> constraints, HashSet<string> names, string definition)
     {
         PartKind? type = null;
+        ShapeDescriptor? shape = null;
         string? subsetOf = null;
         string? memberOf = null;
 
         foreach (collParser.ConstraintContext constraint in constraints)
         {
-            string definition = constraint.DEFINITION().GetText();
+            string relation = constraint.DEFINITION().GetText();
             collParser.ObjectContext obj = constraint.@object();
             string objText = SourceText(obj);
 
-            if (definition == "subset")
+            if (relation == "subset")
             {
                 subsetOf ??= objText;
                 continue;
             }
 
-            if (definition == "is")
+            if (relation == "is")
             {
+                if (obj.shaped() != null)
+                {
+                    // The element type and sizes belong to the constraint that gives the kind.
+                    if (type == null)
+                    {
+                        shape = ShapeDescriptor.Read(obj.shaped(), definition);
+                        type = shape.Head == "list" ? PartKind.List : PartKind.Tensor;
+                    }
+                    continue;
+                }
                 if (obj.BUILT_IN() != null)
                 {
                     PartKind? builtIn = objText switch
@@ -259,10 +304,10 @@ public class DefinitionDescription
         }
 
         string? of = subsetOf ?? memberOf;
-        if (type != null) return (type.Value, of);
-        if (subsetOf != null) return (PartKind.Subset, subsetOf);
-        if (memberOf != null) return (PartKind.Member, memberOf);
-        return (PartKind.Any, null);
+        if (type != null) return (type.Value, of, shape);
+        if (subsetOf != null) return (PartKind.Subset, subsetOf, null);
+        if (memberOf != null) return (PartKind.Member, memberOf, null);
+        return (PartKind.Any, null, null);
     }
 
     // A rule's text as written in the definition string, spacing included.

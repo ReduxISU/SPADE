@@ -33,7 +33,22 @@ internal class ThrowingErrorListener : IAntlrErrorListener<int>, IAntlrErrorList
         parser.RemoveErrorListeners();
         parser.AddErrorListener(listener);
         parser.BuildParseTree = true;
-        return parser.start();
+        collParser.StartContext tree = parser.start();
+        CheckShapes(tree, definition);
+        return tree;
+    }
+
+    // A list, matrix or tensor with an element type is checked as soon as the definition is read, so an
+    // unknown element type or a wrong number of sizes is rejected before any instance (#30).
+    private static void CheckShapes(Antlr4.Runtime.Tree.IParseTree node, string definition)
+    {
+        if (node is collParser.ShapedContext shaped)
+        {
+            SPADE.Grammar.descriptor.ShapeDescriptor.Read(shaped, definition);
+            return;
+        }
+        for (int i = 0; i < node.ChildCount; i++)
+            CheckShapes(node.GetChild(i), definition);
     }
 
     public void SyntaxError(TextWriter output, IRecognizer recognizer, int offendingSymbol, int line, int charPositionInLine, string msg, RecognitionException e)

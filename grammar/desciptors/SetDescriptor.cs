@@ -84,9 +84,11 @@ class SetDescriptor
         isMember = (collection) =>
         {
             formatDescriptor.parseFunc(map, collection);
+            // Size names start free for each instance, and are shared by its constraints (#30).
+            SizeBindings sizes = new(map, formatDescriptor.names);
             foreach (ConstraintDescriptor constraintDescriptor in constraintDescriptors)
             {
-                constraintDescriptor.check(map);
+                constraintDescriptor.check(map, sizes);
             }
             return true;
         };

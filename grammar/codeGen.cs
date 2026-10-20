@@ -14,6 +14,12 @@ class codeGen : IcollListener
 {
     public Dictionary<string, UtilCollection> map;
 
+    // Each part declared "is list int", "is matrix ..." or "is tensor ...", read as a tensor (#30).
+    public Dictionary<string, Tensor> tensors;
+
+    // The definition string, for naming it in errors.
+    private readonly string definition;
+
     public Stack<FormatDescriptor> formatStack;
     public SetDescriptor? setDescriptor;
 
@@ -22,9 +28,11 @@ class codeGen : IcollListener
     public Stack<ConstraintDescriptor> constraintDescriptorStack;
     public Stack<Stack<ConstraintDescriptor>> constraintDescriptorStackStack;
 
-    public codeGen() : base()
+    public codeGen(string definition = "") : base()
     {
+        this.definition = definition;
         map = new();
+        tensors = new();
         formatStack = new();
         setDescriptorStack = new();
         constraintDescriptorStack = new();
@@ -128,7 +136,12 @@ class codeGen : IcollListener
     /// <param name="context">The parse tree.</param>
     public void ExitConstraint([NotNull] collParser.ConstraintContext context)
     {
-        if (context.@object().BUILT_IN() != null)
+        if (context.@object().shaped() != null)
+        {
+            ShapeDescriptor shape = ShapeDescriptor.Read(context.@object().shaped(), definition);
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, shape, tensors, SourceText(context)));
+        }
+        else if (context.@object().BUILT_IN() != null)
         {
             constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!, SourceText(context)));
         }
@@ -229,6 +242,31 @@ class codeGen : IcollListener
     /// </summary>
     /// <param name="context">The parse tree.</param>
     public void ExitList([NotNull] collParser.ListContext context)
+    {
+    }
+
+    public void EnterShaped([NotNull] collParser.ShapedContext context)
+    {
+    }
+
+    // A shaped type pushes nothing; its constraint reads it (#30).
+    public void ExitShaped([NotNull] collParser.ShapedContext context)
+    {
+    }
+
+    public void EnterScalar([NotNull] collParser.ScalarContext context)
+    {
+    }
+
+    public void ExitScalar([NotNull] collParser.ScalarContext context)
+    {
+    }
+
+    public void EnterSizes([NotNull] collParser.SizesContext context)
+    {
+    }
+
+    public void ExitSizes([NotNull] collParser.SizesContext context)
     {
     }
 

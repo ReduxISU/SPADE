@@ -107,6 +107,42 @@ public partial class collBaseListener : IcollListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitList([NotNull] collParser.ListContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="collParser.shaped"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterShaped([NotNull] collParser.ShapedContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="collParser.shaped"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitShaped([NotNull] collParser.ShapedContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="collParser.scalar"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterScalar([NotNull] collParser.ScalarContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="collParser.scalar"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitScalar([NotNull] collParser.ScalarContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="collParser.sizes"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterSizes([NotNull] collParser.SizesContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="collParser.sizes"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitSizes([NotNull] collParser.SizesContext context) { }
 
 	/// <inheritdoc/>
 	/// <remarks>The default implementation does nothing.</remarks>

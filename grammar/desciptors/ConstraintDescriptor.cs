@@ -11,6 +11,19 @@ class ConstraintDescriptor
     String? built_in;
     // The constraint as written in the definition string, e.g. "E subset N unorderedcross N".
     String text;
+    // For "is list int", "is matrix int size m n" or "is tensor 3 number" (#30), and where the value read
+    // as a tensor goes.
+    ShapeDescriptor? shape;
+    Dictionary<string, Tensor>? tensors;
+
+    public ConstraintDescriptor(String _term, ShapeDescriptor _shape, Dictionary<string, Tensor> _tensors, String _text)
+    {
+        term = _term;
+        definition = "is";
+        shape = _shape;
+        tensors = _tensors;
+        text = _text;
+    }
 
     public ConstraintDescriptor(String _term, String _definition, SetDescriptor _set, String _text)
     {
@@ -53,12 +66,20 @@ class ConstraintDescriptor
     }
 
 
-    public void check(Dictionary<string, UtilCollection> map)
+    /// <summary>
+    /// Checks the constraint against the parts in map. Sizes named by a list, matrix or tensor are read from,
+    /// and given to, <paramref name="sizes"/>, shared by every constraint of one instance (#30).
+    /// </summary>
+    public void check(Dictionary<string, UtilCollection> map, SizeBindings sizes)
     {
         switch (definition)
         {
             case "is":
-                if (built_in != null)
+                if (shape != null)
+                {
+                    tensors![term] = shape.Check(term, map[term], sizes, (reason, element) => Failure(reason, element));
+                }
+                else if (built_in != null)
                     switch (built_in)
                     {
                         case "set":
