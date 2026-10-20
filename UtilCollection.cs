@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Runtime.Serialization;
+using System.Text;
 
 namespace SPADE;
 
@@ -28,37 +29,24 @@ public class UtilCollection
 
     }
 
+    /// <summary>
+    /// Reads an instance string such as <c>({1,2},{(1,2)})</c>. Throws
+    /// <see cref="SpadeParseException"/> if it isn't a well-formed value, set or list.
+    /// See <see cref="InstanceScanner"/> for how whitespace is handled.
+    /// </summary>
     public UtilCollection(string instance)
     {
-        if (instance[0] == '{')
-        {
-            isOrdered = false;
-            isValue = false;
-            instance = instance.Substring(1, instance.Length - 2);
-            while (instance != "")
-            {
-                string item = findMatchingBrace(instance);
-                set.Add(new UtilCollection(item));
-                instance = instance.Substring(item.Length).TrimStart(',');
-            }
-        }
-        else if (instance[0] == '(')
-        {
-            isOrdered = true;
-            isValue = false;
-            instance = instance.Substring(1, instance.Length - 2);
-            while (instance != "")
-            {
-                string item = findMatchingBrace(instance);
-                list.Add(new UtilCollection(item));
-                instance = instance.Substring(item.Length).TrimStart(',');
-            }
-        }
-        else
-        {
-            isValue = true;
-            value = instance;
-        }
+        UtilCollection parsed = InstanceScanner.Parse(instance);
+        set = parsed.set;
+        list = parsed.list;
+        value = parsed.value;
+        isOrdered = parsed.isOrdered;
+        isValue = parsed.isValue;
+    }
+
+    internal static UtilCollection FromValue(string value)
+    {
+        return new UtilCollection { value = value, isValue = true };
     }
 
     public UtilCollection(HashSet<string> set_)
@@ -92,43 +80,6 @@ public class UtilCollection
     {
         set = new HashSet<UtilCollection>(set__);
         isOrdered = false;
-    }
-
-    private string findMatchingBrace(string instance)
-    {
-        Dictionary<char, char> braces = new Dictionary<char, char>
-        {
-            { '(', ')' },
-            { '{', '}' },
-        };
-
-        if (!braces.ContainsKey(instance[0]))
-        {
-            return instance.Split(',')[0];
-        }
-
-        Stack<char> stack = new Stack<char>();
-
-        for (int i = 0; i < instance.Length; i++)
-        {
-            if (braces.ContainsKey(instance[i]))
-            {
-                stack.Push(instance[i]);
-            }
-            else if (braces.Values.Contains(instance[i]))
-            {
-                char openBracket = stack.Pop();
-                if (braces[openBracket] != instance[i])
-                {
-                    throw new Exception("Braces not matched");
-                }
-                if (stack.Count() == 0)
-                {
-                    return instance.Substring(0, i + 1);
-                }
-            }
-        }
-        throw new Exception("Braces not matched");
     }
 
     public UtilCollection this[int index]
@@ -393,24 +344,28 @@ public class UtilCollection
             return value!;
         }
 
-        string str = "";
-        if (isOrdered)
-            str += "(";
-        else
-            str += "{";
+        StringBuilder sb = new StringBuilder();
+        AppendTo(sb);
+        return sb.ToString();
+    }
 
-        foreach (var item in this)
+    // Builds the text in one buffer; adding strings with += copied it once per element.
+    private void AppendTo(StringBuilder sb)
+    {
+        if (isValue)
         {
-            //Console.WriteLine(item.ToString());
-            str += item.ToString() + ",";
+            sb.Append(value);
+            return;
         }
-        str = str.TrimEnd(',');
 
-        if (isOrdered)
-            str += ")";
-        else
-            str += "}";
-
-        return str;
+        sb.Append(isOrdered ? '(' : '{');
+        bool first = true;
+        foreach (UtilCollection item in ToList())
+        {
+            if (!first) sb.Append(',');
+            item.AppendTo(sb);
+            first = false;
+        }
+        sb.Append(isOrdered ? ')' : '}');
     }
 }

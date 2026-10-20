@@ -75,7 +75,8 @@ class SetDescriptor
 
     public SetDescriptor Cross(SetDescriptor other)
     {
-        Func<UtilCollection, bool> _isMember = (a) => isMember(a[0]) && other.isMember(a[1]);
+        Func<UtilCollection, bool> _isMember = (a) =>
+            a.IsOrdered() && a.Count() == 2 && isMember(a[0]) && other.isMember(a[1]);
         Func<UtilCollection> _genSet = () => genSet().Cross(other.genSet());
         return new SetDescriptor(map, _isMember, _genSet);
     }
@@ -84,9 +85,12 @@ class SetDescriptor
     {
         Func<UtilCollection, bool> _isMember = (a) =>
         {
+            // Each member is a set of nodes, like the edge {a,b}. A list such as (a,b)
+            // is an ordered pair and belongs to cross, and a plain value is not an edge.
+            if (a.IsValue() || a.IsOrdered()) return false;
+
             foreach (UtilCollection item in a)
             {
-                if (!item.IsOrdered()) return false;
                 if (!isMember(item) && !other.isMember(item))
                 {
                     return false;
