@@ -5,5 +5,5 @@ engine = "dotnet"
 solution = "SPADE.slnx"
 
 [unit-test]
-# The standard we're holding to. Floor 70%; the goal is 80%+. New code needs tests to keep it above the floor.
-coverage-min = 70
+# The standard we're holding to. Floor 80%. New code needs tests to keep it above the floor.
+coverage-min = 80
