@@ -15,6 +15,7 @@ After the symbol "|" is a list of assertions or *constraints* which must be true
 
 ### Definition
 - "is" checks the type of a collection. It can be followed by "set", "list", or "int", and constrains the collection to be that type. An example is "U is set" which constrains U to be a set
+- "is multiset" marks a collection written with curly braces as a multiset, so repeated elements are kept instead of dropped. For example, "{N | N is multiset, N subset int}" reads {3,3,2,2} as four numbers. It applies before the other constraints, wherever it is written. See [multisets](InstanceString.md#multisets).
 - "subset" checks that the collection is a subset of the object on the right. An example is "A subset B" which constrains A to be a subset of B. 
 
 ### Objects
