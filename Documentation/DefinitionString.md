@@ -14,7 +14,9 @@ In the definition string, first there is a *format string*, which is the part to
 After the symbol "|" is a list of assertions or *constraints* which must be true of the instance, separated by commas that are assumed to be true for a valid problem instance. The language used for defining constraints in SPADE is modeled after the language of set theory. Each constraint says that some named element is either a basic object or related to the other objects in some way. A constraint is a terminal (one of the named collections from the format string) followed by a definition and then an object. 
 
 ### Definition
-- "is" checks the type of a collection. It can be followed by "set", "list", or "int", and constrains the collection to be that type. An example is "U is set" which constrains U to be a set
+- "is" checks the type of a collection. It can be followed by "set", "list", "int" or "string", and constrains the collection to be that type. An example is "U is set" which constrains U to be a set
+- "is multiset" marks a collection written with curly braces as a multiset, so repeated elements are kept instead of dropped. For example, "{N | N is multiset, N subset int}" reads {3,3,2,2} as four numbers. It applies before the other constraints, wherever it is written. See [multisets](InstanceString.md#multisets).
+- "is string" checks that a collection is a single value, not a set, list or multiset. Any value counts, a word like `kitten`, words with spaces like `New York`, or a number like `5`. For example, "{(x,y) | x is string, y is string}" accepts (kitten,sitting) and rejects (kitten,{sitting}). A value with commas or brackets in it can be written in quotes, like "hello, world"; see [quoted values](InstanceString.md#quoted-values). Since `string` is a keyword, it can't be used as a name in the format string or a constraint.
 - "subset" checks that the collection is a subset of the object on the right. An example is "A subset B" which constrains A to be a subset of B. 
 
 ### Objects

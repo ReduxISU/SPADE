@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Runtime.Serialization;
+using System.Text;
 
 namespace SPADE;
 
@@ -13,6 +14,15 @@ public class UtilCollection
 
     private bool isOrdered;
     private bool isValue;
+
+    // A multiset keeps every occurrence in `list`, in input order, and how often each element
+    // occurs in `counts` (#1). It is unordered, like a set.
+    private bool isMultiset;
+    private Dictionary<UtilCollection, int>? counts;
+
+    // For a set read from an instance string: every element as written, duplicates included,
+    // so the set can still be read as a multiset if its definition says so.
+    private List<UtilCollection>? occurrences;
 
     // Set the first time this collection is hashed. A HashSet keeps an element under the hash it
     // had when it went in, so changing the element (or anything inside it) afterwards would leave
@@ -28,37 +38,33 @@ public class UtilCollection
 
     }
 
+    /// <summary>
+    /// Reads an instance string such as <c>({1,2},{(1,2)})</c>. Throws
+    /// <see cref="SpadeParseException"/> if it isn't a well-formed value, set or list.
+    /// See <see cref="InstanceScanner"/> for how whitespace is handled.
+    /// </summary>
     public UtilCollection(string instance)
     {
-        if (instance[0] == '{')
-        {
-            isOrdered = false;
-            isValue = false;
-            instance = instance.Substring(1, instance.Length - 2);
-            while (instance != "")
-            {
-                string item = findMatchingBrace(instance);
-                set.Add(new UtilCollection(item));
-                instance = instance.Substring(item.Length).TrimStart(',');
-            }
-        }
-        else if (instance[0] == '(')
-        {
-            isOrdered = true;
-            isValue = false;
-            instance = instance.Substring(1, instance.Length - 2);
-            while (instance != "")
-            {
-                string item = findMatchingBrace(instance);
-                list.Add(new UtilCollection(item));
-                instance = instance.Substring(item.Length).TrimStart(',');
-            }
-        }
-        else
-        {
-            isValue = true;
-            value = instance;
-        }
+        UtilCollection parsed = InstanceScanner.Parse(instance);
+        set = parsed.set;
+        list = parsed.list;
+        value = parsed.value;
+        isOrdered = parsed.isOrdered;
+        isValue = parsed.isValue;
+        isMultiset = parsed.isMultiset;
+        counts = parsed.counts;
+        occurrences = parsed.occurrences;
+    }
+
+    internal static UtilCollection FromValue(string value)
+    {
+        return new UtilCollection { value = value, isValue = true };
+    }
+
+    // Copies items, like the constructors, so the caller's list can't change this set later.
+    internal static UtilCollection FromSetItems(List<UtilCollection> items)
+    {
+        return new UtilCollection(items.ToHashSet()) { occurrences = new List<UtilCollection>(items) };
     }
 
     public UtilCollection(HashSet<string> set_)
@@ -94,43 +100,6 @@ public class UtilCollection
         isOrdered = false;
     }
 
-    private string findMatchingBrace(string instance)
-    {
-        Dictionary<char, char> braces = new Dictionary<char, char>
-        {
-            { '(', ')' },
-            { '{', '}' },
-        };
-
-        if (!braces.ContainsKey(instance[0]))
-        {
-            return instance.Split(',')[0];
-        }
-
-        Stack<char> stack = new Stack<char>();
-
-        for (int i = 0; i < instance.Length; i++)
-        {
-            if (braces.ContainsKey(instance[i]))
-            {
-                stack.Push(instance[i]);
-            }
-            else if (braces.Values.Contains(instance[i]))
-            {
-                char openBracket = stack.Pop();
-                if (braces[openBracket] != instance[i])
-                {
-                    throw new Exception("Braces not matched");
-                }
-                if (stack.Count() == 0)
-                {
-                    return instance.Substring(0, i + 1);
-                }
-            }
-        }
-        throw new Exception("Braces not matched");
-    }
-
     public UtilCollection this[int index]
     {
         get
@@ -149,13 +118,19 @@ public class UtilCollection
     public void Add(UtilCollection item)
     {
         ThrowIfFrozen();
-        if (isOrdered)
+        if (isMultiset)
+        {
+            list.Add(item);
+            counts![item] = CountOf(item) + 1;
+        }
+        else if (isOrdered)
         {
             list.Add(item);
         }
         else
         {
             set.Add(item);
+            occurrences?.Add(item);
         }
     }
 
@@ -163,7 +138,7 @@ public class UtilCollection
     {
         if (isValue) throw new InvalidOperationException("Cannot enumerate over a value");
 
-        if (isOrdered)
+        if (isOrdered || isMultiset)
             return list.GetEnumerator();
         else
             return set.GetEnumerator();
@@ -212,8 +187,56 @@ public class UtilCollection
         return isValue;
     }
 
+    public bool IsMultiset()
+    {
+        return isMultiset;
+    }
+
+    /// <summary>
+    /// The same elements as a multiset. For a set read from an instance string, this brings back
+    /// the duplicates the set dropped, so <c>{3,3,2,2}</c> gives four elements. Only for sets and multisets.
+    /// </summary>
+    public UtilCollection AsMultiset()
+    {
+        if (isValue || isOrdered) throw new InvalidOperationException("Only a set can be read as a multiset");
+        if (isMultiset) return this;
+
+        UtilCollection multiset = new UtilCollection { isMultiset = true, counts = new() };
+        foreach (UtilCollection item in occurrences ?? set.ToList())
+        {
+            multiset.Add(item);
+        }
+        return multiset;
+    }
+
+    /// <summary>How many times item occurs: 0 or 1 in a set, any number in a multiset or list.</summary>
+    public int CountOf(UtilCollection item)
+    {
+        if (isValue) throw new InvalidOperationException("Cannot count in a value");
+        if (isMultiset) return counts!.TryGetValue(item, out int n) ? n : 0;
+        if (isOrdered) return list.Count(x => x.Equals(item));
+        return set.Contains(item) ? 1 : 0;
+    }
+
+    /// <summary>
+    /// True if every element occurs in other at least as often as it does here, so the multiset
+    /// {7,7} is in {7,7,1} but not in {7,1}. Only for sets and multisets.
+    /// </summary>
+    public bool IsSubsetOf(UtilCollection other)
+    {
+        if (isValue || isOrdered || other.isValue || other.isOrdered)
+            throw new InvalidOperationException("IsSubsetOf needs two sets or multisets");
+
+        IEnumerable<UtilCollection> distinct = isMultiset ? counts!.Keys : set;
+        return distinct.All(item => CountOf(item) <= other.CountOf(item));
+    }
+
     public bool Contains(UtilCollection collection)
     {
+        if (isMultiset)
+        {
+            return counts!.ContainsKey(collection);
+        }
         if (isOrdered)
         {
             return list.Contains(collection);
@@ -225,7 +248,7 @@ public class UtilCollection
     }
     public int Count()
     {
-        if (isOrdered)
+        if (isOrdered || isMultiset)
         {
             return list.Count;
         }
@@ -243,6 +266,17 @@ public class UtilCollection
     public UtilCollection Intersect(UtilCollection other)
     {
         if (isOrdered != other.isOrdered) throw new InvalidOperationException("Can't take the intersection of a set and a list");
+        if (isMultiset != other.isMultiset) throw new InvalidOperationException("Can't take the intersection of a set and a multiset");
+        if (isMultiset)
+        {
+            // Each element occurs as often as in whichever side has fewer.
+            UtilCollection result = new UtilCollection { isMultiset = true, counts = new() };
+            foreach (UtilCollection item in list)
+            {
+                if (result.CountOf(item) < other.CountOf(item)) result.Add(item);
+            }
+            return result;
+        }
         if (!isOrdered)
         {
             return new UtilCollection(set.Intersect(other.set).ToHashSet());
@@ -256,6 +290,18 @@ public class UtilCollection
     public UtilCollection Union(UtilCollection other)
     {
         if (isOrdered != other.isOrdered) throw new InvalidOperationException("Can't take the union of a set and a list");
+        if (isMultiset != other.isMultiset) throw new InvalidOperationException("Can't take the union of a set and a multiset");
+        if (isMultiset)
+        {
+            // Each element occurs as often as in whichever side has more.
+            UtilCollection result = new UtilCollection { isMultiset = true, counts = new() };
+            foreach (UtilCollection item in list) result.Add(item);
+            foreach (UtilCollection item in other.list)
+            {
+                if (result.CountOf(item) < other.CountOf(item)) result.Add(item);
+            }
+            return result;
+        }
         if (!isOrdered)
         {
             return new UtilCollection(set.Union(other.set).ToHashSet());
@@ -286,12 +332,19 @@ public class UtilCollection
 
         UtilCollection other = (UtilCollection)obj;
 
-        // A value, a list and a set are never equal to each other, even when empty.
-        if (isValue != other.isValue || isOrdered != other.isOrdered) return false;
+        // A value, a list, a set and a multiset are never equal to each other, even when empty.
+        if (isValue != other.isValue || isOrdered != other.isOrdered || isMultiset != other.isMultiset) return false;
 
         if (isValue)
         {
             return value == other.value;
+        }
+
+        if (isMultiset)
+        {
+            return list.Count == other.list.Count
+                && counts!.Count == other.counts!.Count
+                && counts.All(entry => other.CountOf(entry.Key) == entry.Value);
         }
 
         if (isOrdered)
@@ -362,6 +415,17 @@ public class UtilCollection
             return hash.ToHashCode();
         }
 
+        if (isMultiset)
+        {
+            // Order-independent, like a set, but every occurrence counts.
+            int total = 0;
+            foreach (UtilCollection item in list)
+            {
+                total = unchecked(total + item.GetHashCode());
+            }
+            return HashCode.Combine(isOrdered, isMultiset, list.Count, total);
+        }
+
         // Sets are equal regardless of order, so combine element hashes with
         // an order-independent sum rather than hashing ToString(), which
         // follows insertion order.
@@ -375,6 +439,11 @@ public class UtilCollection
 
     public List<UtilCollection> ToList()
     {
+        if (isMultiset)
+        {
+            // A copy, so changes to it can't get out of step with the counts.
+            return new List<UtilCollection>(list);
+        }
         if (isOrdered)
         {
             // A copy, so changes to it can't reach a collection that may already be frozen.
@@ -386,6 +455,11 @@ public class UtilCollection
         }
     }
 
+    /// <summary>
+    /// A set or list as an instance string that reads back as the same collection. A value inside it
+    /// is quoted when it has to be, such as <c>{"a,b",c}</c>. A value on its own is its text, unquoted,
+    /// so <c>"hello, world"</c> read alone gives <c>hello, world</c>.
+    /// </summary>
     override public string ToString()
     {
         if (isValue)
@@ -393,24 +467,30 @@ public class UtilCollection
             return value!;
         }
 
-        string str = "";
-        if (isOrdered)
-            str += "(";
-        else
-            str += "{";
+        StringBuilder sb = new StringBuilder();
+        AppendTo(sb);
+        return sb.ToString();
+    }
 
-        foreach (var item in this)
+    // Builds the text in one buffer; adding strings with += copied it once per element.
+    private void AppendTo(StringBuilder sb)
+    {
+        if (isValue)
         {
-            //Console.WriteLine(item.ToString());
-            str += item.ToString() + ",";
+            // Inside a collection, a value that couldn't be read back as written, such as
+            // "hello, world", is quoted (#22). Every other value is written as it is.
+            sb.Append(InstanceScanner.NeedsQuotes(value!) ? InstanceScanner.Quote(value!) : value);
+            return;
         }
-        str = str.TrimEnd(',');
 
-        if (isOrdered)
-            str += ")";
-        else
-            str += "}";
-
-        return str;
+        sb.Append(isOrdered ? '(' : '{');
+        bool first = true;
+        foreach (UtilCollection item in ToList())
+        {
+            if (!first) sb.Append(',');
+            item.AppendTo(sb);
+            first = false;
+        }
+        sb.Append(isOrdered ? ')' : '}');
     }
 }
