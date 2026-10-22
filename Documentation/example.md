@@ -28,3 +28,47 @@ foreach (UtilCollection c in graph["E"])
 ```
 
 Above is example code for parsing a graph type problem. The StringParser class is provided with a [definition string](DefinitionString.md), and then with an [instance string](InstanceString.md). It then parses and verifies the instance string. Now, you can access items of that problem by using a key access, which returns a [UtilCollection](utilcollection.md) class, which can then be further used however you need to use it. 
+
+## Handling bad input
+
+Every problem with an instance string throws `SpadeParseException`: text that can't be read, a shape that doesn't match the definition string, or a failed constraint. Catch it to report bad input, for example as a 400 response:
+
+```c#
+try
+{
+    graph.parse(instanceString);
+}
+catch (SpadeParseException e)
+{
+    // e.g. "expected , or } at position 5, found end of input"
+    // or   "Constraint E subset N cross N failed: (A,X) is not a member"
+    Console.WriteLine(e.Message);
+}
+```
+
+Any other exception type means a bug in SPADE or in the definition string, not bad input. A definition string that can't be read throws `FormatException` as soon as the `StringParser` is created, before any instance is parsed.
+
+## Describing a definition string
+
+`Definition` tells you the names and types a [definition string](DefinitionString.md) declares, without needing an instance string. This is useful for building an editor or form for a problem before any instance exists.
+
+```c#
+StringParser problem = new("{((N,E),K) | N is set, E subset N unorderedcross N, K is int}");
+DefinitionDescription d = problem.Definition;
+
+Console.WriteLine(d.Outline);       // ((N,E),K)
+
+foreach (DefinitionPart part in d.Parts)
+{
+    // N: Set at [0,0]
+    // E: Subset of N unorderedcross N at [0,1]
+    // K: Int at [1]
+    Console.WriteLine($"{part} at [{string.Join(",", part.Path)}]");
+}
+
+Console.WriteLine(d["E"].Constraints[0]); // E subset N unorderedcross N
+```
+
+Each part has a `Name`, a `Kind` (`Set`, `Multiset`, `List`, `Int`, `Subset`, `Member`, or `Any` when nothing says what it is), `Of` (what it is a subset or member of, as written), `Path` (where it sits in the outline), and `Constraints` (every constraint naming it, as written). Only the outer format's names are parts; names inside a nested set, like `a` in `S subset {a | a subset U}`, are not.
+
+Creating a `StringParser` reads its definition string, so a malformed one, such as `{N | N is set` with its closing brace missing, throws a `FormatException` naming it and the position of the first error, instead of being guessed at. `Definition` is worked out the first time you use it. `DefinitionDescription.Parse(definitionString)` reads a definition string the same way without a `StringParser`, and throws the same `FormatException`.
