@@ -1,0 +1,7 @@
+root = true
+
+# ANTLR generates these from grammar/coll.g4 and marks each class [CLSCompliant(false)].
+# The assembly declares no CLS compliance, so the compiler calls those marks unneeded (CS3021).
+# Silenced here, not in the files, so regenerating the parser keeps the build quiet.
+[grammar/coll{Parser,Lexer,Listener,BaseListener}.cs]
+dotnet_diagnostic.CS3021.severity = none
