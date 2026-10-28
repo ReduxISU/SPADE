@@ -14,6 +14,12 @@ class codeGen : IcollListener
 {
     public Dictionary<string, UtilCollection> map;
 
+    // Each part declared "is list int", "is matrix ..." or "is tensor ...", read as a tensor (#30).
+    public Dictionary<string, Tensor> tensors;
+
+    // The definition string, for naming it in errors.
+    private readonly string definition;
+
     public Stack<FormatDescriptor> formatStack;
     public SetDescriptor? setDescriptor;
 
@@ -22,9 +28,11 @@ class codeGen : IcollListener
     public Stack<ConstraintDescriptor> constraintDescriptorStack;
     public Stack<Stack<ConstraintDescriptor>> constraintDescriptorStackStack;
 
-    public codeGen() : base()
+    public codeGen(string definition = "") : base()
     {
+        this.definition = definition;
         map = new();
+        tensors = new();
         formatStack = new();
         setDescriptorStack = new();
         constraintDescriptorStack = new();
@@ -34,6 +42,12 @@ class codeGen : IcollListener
     public void Parse(UtilCollection utilCollection)
     {
         setDescriptor!.isMember(utilCollection);
+    }
+
+    // A rule's text as written in the definition string, spacing included, for error messages.
+    private static string SourceText(ParserRuleContext context)
+    {
+        return context.Start.InputStream.GetText(Interval.Of(context.Start.StartIndex, context.Stop.StopIndex));
     }
 
     /// <summary>
@@ -92,7 +106,7 @@ class codeGen : IcollListener
                 lst.Add(formatStack.Pop());
             }
             lst.Reverse(); // have to reverse the list, since the leftmost should be the one that was popped first
-            formatStack.Push(new FormatDescriptor(lst));
+            formatStack.Push(new FormatDescriptor(lst, SourceText(context)));
         }
         if (context.TERM() != null)
         {
@@ -122,13 +136,25 @@ class codeGen : IcollListener
     /// <param name="context">The parse tree.</param>
     public void ExitConstraint([NotNull] collParser.ConstraintContext context)
     {
-        if (context.@object().BUILT_IN() != null)
+        if (context.@object().shaped() != null)
         {
-            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!));
+            ShapeDescriptor shape = ShapeDescriptor.Read(context.@object().shaped(), definition);
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, shape, tensors, SourceText(context)));
+        }
+        else if (context.@object().BUILT_IN() != null)
+        {
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!, SourceText(context)));
+        }
+        else if (context.@object().BUILT_IN_SET() != null && context.DEFINITION().ToString() == "is")
+        {
+            // "N is int" and "N is number" are type checks, like "N is set". The set descriptor
+            // pushed for them is only needed by other definitions, such as "S subset int".
+            setDescriptorStack.Pop();
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN_SET().ToString()!, SourceText(context)));
         }
         else
         {
-            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, setDescriptorStack.Pop()));
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, setDescriptorStack.Pop(), SourceText(context)));
         }
     }
     /// <summary>
@@ -151,7 +177,8 @@ class codeGen : IcollListener
 
         if (context.BUILT_IN_SET() != null)
         {
-            setDescriptorStack.Push(new SetDescriptor(map, BuiltInSet.integers));
+            BuiltInSet builtInSet = context.BUILT_IN_SET().GetText() == "number" ? BuiltInSet.numbers : BuiltInSet.integers;
+            setDescriptorStack.Push(new SetDescriptor(map, builtInSet));
         }
 
         if (context.TERM() != null)
@@ -215,6 +242,31 @@ class codeGen : IcollListener
     /// </summary>
     /// <param name="context">The parse tree.</param>
     public void ExitList([NotNull] collParser.ListContext context)
+    {
+    }
+
+    public void EnterShaped([NotNull] collParser.ShapedContext context)
+    {
+    }
+
+    // A shaped type pushes nothing; its constraint reads it (#30).
+    public void ExitShaped([NotNull] collParser.ShapedContext context)
+    {
+    }
+
+    public void EnterScalar([NotNull] collParser.ScalarContext context)
+    {
+    }
+
+    public void ExitScalar([NotNull] collParser.ScalarContext context)
+    {
+    }
+
+    public void EnterSizes([NotNull] collParser.SizesContext context)
+    {
+    }
+
+    public void ExitSizes([NotNull] collParser.SizesContext context)
     {
     }
 

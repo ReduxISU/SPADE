@@ -90,4 +90,34 @@ public interface IcollListener : IParseTreeListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitList([NotNull] collParser.ListContext context);
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="collParser.shaped"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterShaped([NotNull] collParser.ShapedContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="collParser.shaped"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitShaped([NotNull] collParser.ShapedContext context);
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="collParser.scalar"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterScalar([NotNull] collParser.ScalarContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="collParser.scalar"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitScalar([NotNull] collParser.ScalarContext context);
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="collParser.sizes"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterSizes([NotNull] collParser.SizesContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="collParser.sizes"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitSizes([NotNull] collParser.SizesContext context);
 }

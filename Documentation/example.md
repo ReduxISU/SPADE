@@ -28,3 +28,66 @@ foreach (UtilCollection c in graph["E"])
 ```
 
 Above is example code for parsing a graph type problem. The StringParser class is provided with a [definition string](DefinitionString.md), and then with an [instance string](InstanceString.md). It then parses and verifies the instance string. Now, you can access items of that problem by using a key access, which returns a [UtilCollection](utilcollection.md) class, which can then be further used however you need to use it. 
+
+## Handling bad input
+
+Every problem with an instance string throws `SpadeParseException`: text that can't be read, a shape that doesn't match the definition string, or a failed constraint. Catch it to report bad input, for example as a 400 response:
+
+```c#
+try
+{
+    graph.parse(instanceString);
+}
+catch (SpadeParseException e)
+{
+    // e.g. "expected , or } at position 5, found end of input"
+    // or   "Constraint E subset N cross N failed: (A,X) is not a member"
+    Console.WriteLine(e.Message);
+}
+```
+
+To act on an error without reading its message, use its properties. When a constraint or type check fails, `Part` names the part of the outer format it belongs to and `Element` holds the member or value that failed, in full even when the message shortens it. When that element is missing a piece from another part, `MissingValue` and `ExpectedIn` name the piece and the part:
+
+```c#
+StringParser graph = new("{(N,E) | N is set, E subset N unorderedcross N}");
+try
+{
+    graph.parse("({1,2},{{1,9}})");
+}
+catch (SpadeParseException e)
+{
+    // "Constraint E subset N unorderedcross N failed: {1,9} is not a member"
+    Console.WriteLine($"{e.Part} {e.Element} {e.MissingValue} {e.ExpectedIn}"); // E {1,9} 9 N
+}
+```
+
+A failure inside a nested set, like `w is int` in `E subset {(e,w) | ...}`, belongs to the outer part (`E`) and the member of it that failed. `MissingValue` and `ExpectedIn` are null when the set isn't built from parts, as in `S subset int`, and all four are null for text that can't be read or a shape that doesn't match the definition string.
+
+Any other exception type means a bug in SPADE or in the definition string, not bad input. A definition string that can't be read throws `FormatException` as soon as the `StringParser` is created, before any instance is parsed.
+
+## Describing a definition string
+
+`Definition` tells you the names and types a [definition string](DefinitionString.md) declares, without needing an instance string. This is useful for building an editor or form for a problem before any instance exists.
+
+```c#
+StringParser problem = new("{((N,E),K) | N is set, E subset N unorderedcross N, K is int}");
+DefinitionDescription d = problem.Definition;
+
+Console.WriteLine(d.Outline);       // ((N,E),K)
+
+foreach (DefinitionPart part in d.Parts)
+{
+    // N: Set at [0,0]
+    // E: Subset of N unorderedcross N at [0,1]
+    // K: Int at [1]
+    Console.WriteLine($"{part} at [{string.Join(",", part.Path)}]");
+}
+
+Console.WriteLine(d["E"].Constraints[0]); // E subset N unorderedcross N
+```
+
+Each part has a `Name`, a `Kind` (`Set`, `Multiset`, `List`, `Int`, `Number`, `String`, `Tensor`, `Subset`, `Member`, or `Any` when nothing says what it is), `Of` (what it is a subset or member of, as written), `Path` (where it sits in the outline), and `Constraints` (every constraint naming it, as written).
+
+A part declared with an element type, "d is list int size m", "C is matrix int size m n" or "T is tensor 3 number", also has an `ElementType` (`Int`, `Number` or `String`), a `Rank` (1 for a list, 2 for a matrix) and `Sizes`, the size of each dimension as written: `["m", "n"]` for C, `["9", "9"]` for "G is matrix int size 9 9", and empty when the sizes are free. A matrix's `Kind` is `Tensor` with `Rank` 2. For other parts `ElementType` and `Rank` are null and `Sizes` is empty. `ToString()` gives, for example, `C: Tensor 2 int size m n`. Only the outer format's names are parts; names inside a nested set, like `a` in `S subset {a | a subset U}`, are not.
+
+Creating a `StringParser` reads its definition string, so a malformed one, such as `{N | N is set` with its closing brace missing, throws a `FormatException` naming it and the position of the first error, instead of being guessed at. `Definition` is worked out the first time you use it. `DefinitionDescription.Parse(definitionString)` reads a definition string the same way without a `StringParser`, and throws the same `FormatException`.
