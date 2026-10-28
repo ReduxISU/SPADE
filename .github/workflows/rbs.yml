@@ -34,6 +34,6 @@ jobs:
   # closed. Hourly too, for sub-issues in other repos, which don't trigger this one.
   close-parents:
     if: github.event_name == 'issues' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    uses: ReduxISU/Redux_Build_System/.github/workflows/close-finished-parents.yml@feat/close-finished-parents
+    uses: ReduxISU/Redux_Build_System/.github/workflows/close-finished-parents.yml@main
     permissions:
       issues: write
