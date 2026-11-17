@@ -7,5 +7,6 @@ SPADE is a tool that parses strings representing instances of discrete math type
  - [Instance Strings](InstanceString.md)
  - [Definition String](DefinitionString.md)
  - [Utilcollections](utilcollection.md)
+ - [Boolean formulas](Formula.md)
  - [Using SPADE from several threads](threads.md)
  - [SPADE Development](development.md)

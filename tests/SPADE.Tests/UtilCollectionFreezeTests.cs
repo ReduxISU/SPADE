@@ -199,4 +199,52 @@ public class UtilCollectionFreezeTests
 
         Assert.Equal(2, set.Count());
     }
+
+    // --- Multisets (#1) ---
+
+    private static UtilCollection M(string s) => new UtilCollection(s).AsMultiset();
+
+    [Fact]
+    public void AddThrowsOnAHashedMultiset()
+    {
+        UtilCollection multiset = M("{3,3,2}");
+        HashSet<UtilCollection> outer = new() { multiset };
+
+        Assert.Throws<InvalidOperationException>(() => multiset.Add(C("3")));
+        Assert.Equal(2, multiset.CountOf(C("3")));
+        Assert.Contains(M("{2,3,3}"), outer);
+    }
+
+    [Fact]
+    public void ElementsOfAHashedMultisetAreFrozen()
+    {
+        UtilCollection element = C("(1,2)");
+        UtilCollection multiset = M("{}");
+        multiset.Add(element);
+        multiset.Add(C("(1,2)"));
+
+        // Counting an element hashes it, so it freezes as soon as it goes in.
+        Assert.Throws<InvalidOperationException>(() => element.Add(C("3")));
+        Assert.Equal(2, multiset.CountOf(C("(1,2)")));
+    }
+
+    [Fact]
+    public void AsMultisetOfAHashedSetStillKeepsDuplicates()
+    {
+        UtilCollection set = C("{3,3,2}");
+        _ = set.GetHashCode();
+
+        Assert.Throws<InvalidOperationException>(() => set.Add(C("3")));
+        Assert.Equal(3, set.AsMultiset().Count());
+    }
+
+    [Fact]
+    public void UnhashedMultisetsCanStillChange()
+    {
+        UtilCollection multiset = M("{3}");
+        multiset.Add(C("3"));
+
+        Assert.Equal(2, multiset.CountOf(C("3")));
+        Assert.Equal(M("{3,3}").GetHashCode(), multiset.GetHashCode());
+    }
 }

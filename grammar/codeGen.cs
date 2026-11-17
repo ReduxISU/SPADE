@@ -36,6 +36,12 @@ class codeGen : IcollListener
         setDescriptor!.isMember(utilCollection);
     }
 
+    // A rule's text as written in the definition string, spacing included, for error messages.
+    private static string SourceText(ParserRuleContext context)
+    {
+        return context.Start.InputStream.GetText(Interval.Of(context.Start.StartIndex, context.Stop.StopIndex));
+    }
+
     /// <summary>
     /// Enter a parse tree produced by <see cref="collParser.start"/>.
     /// </summary>
@@ -92,7 +98,7 @@ class codeGen : IcollListener
                 lst.Add(formatStack.Pop());
             }
             lst.Reverse(); // have to reverse the list, since the leftmost should be the one that was popped first
-            formatStack.Push(new FormatDescriptor(lst));
+            formatStack.Push(new FormatDescriptor(lst, SourceText(context)));
         }
         if (context.TERM() != null)
         {
@@ -124,11 +130,25 @@ class codeGen : IcollListener
     {
         if (context.@object().BUILT_IN() != null)
         {
-            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!));
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN().ToString()!, SourceText(context)));
+        }
+        else if (context.@object().BUILT_IN_SET() != null && context.DEFINITION().ToString() == "is")
+        {
+            // "N is int" and "N is number" are type checks, like "N is set". The set descriptor
+            // pushed for them is only needed by other definitions, such as "S subset int".
+            setDescriptorStack.Pop();
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN_SET().ToString()!, SourceText(context)));
+        }
+        else if (context.@object().TERM() != null && context.DEFINITION().ToString() == "is" && FormulaParser.IsTypeWord(context.@object().TERM().GetText()))
+        {
+            // "phi is formula" and "phi is cnf" are type checks (#44). The words are plain TERMs to the
+            // grammar, so the set descriptor ExitObject pushed for them is dropped.
+            setDescriptorStack.Pop();
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().TERM().GetText(), SourceText(context)));
         }
         else
         {
-            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, setDescriptorStack.Pop()));
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, setDescriptorStack.Pop(), SourceText(context)));
         }
     }
     /// <summary>
@@ -151,7 +171,8 @@ class codeGen : IcollListener
 
         if (context.BUILT_IN_SET() != null)
         {
-            setDescriptorStack.Push(new SetDescriptor(map, BuiltInSet.integers));
+            BuiltInSet builtInSet = context.BUILT_IN_SET().GetText() == "number" ? BuiltInSet.numbers : BuiltInSet.integers;
+            setDescriptorStack.Push(new SetDescriptor(map, builtInSet));
         }
 
         if (context.TERM() != null)

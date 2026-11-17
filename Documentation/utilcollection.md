@@ -54,7 +54,10 @@ Returns a new UtilCollections object that is the union of the two collections. O
 Returns True if the two UtilCollections objects are equal to each other and False otherwise. Comparison is done by value, so if two different instances of the UtilCollections class that have the same structure and elements are compared, equals will return True. 
 
 ### Count
-Returns the length of the collection.
+Returns the length of the collection. For a multiset, repeated elements are counted every time they occur.
+
+### CountOf
+Returns how many times an element occurs: 0 or 1 in a set, any number in a multiset or list.
 
 ### ToList
 Returns a list representing the elements of the collection. If the collection is ordered, it returns a copy of the list, so changing the copy doesn't change the collection. If the collection is unordered, it is cast to a list and then returned.
@@ -69,7 +72,7 @@ Checks if the collection contains another UtilCollection object. Comparison is d
 Adds a UtilCollection object to the collection. Throws `InvalidOperationException` if the collection has been hashed (see below).
 
 ### Collections freeze once hashed
-A `HashSet` or `Dictionary` files each element under the hash code it had when it went in. If the element changed afterwards, it would sit under a stale hash: `Contains` would miss it and duplicates could slip in, with no error. So the first time a UtilCollection is hashed, it freezes, and `Add` or assigning to an index throws `InvalidOperationException`. That happens when it is added to a set (including a UtilCollection set), used as a dictionary key, or put inside a list or set that is itself hashed, since hashing a collection hashes everything inside it.
+A `HashSet` or `Dictionary` files each element under the hash code it had when it went in. If the element changed afterwards, it would sit under a stale hash: `Contains` would miss it and duplicates could slip in, with no error. So the first time a UtilCollection is hashed, it freezes, and `Add` or assigning to an index throws `InvalidOperationException`. That happens when it is added to a set (including a UtilCollection set), used as a dictionary key, or put inside a list or set that is itself hashed, since hashing a collection hashes everything inside it. Multisets freeze the same way.
 
 To freeze a collection on purpose, call `Freeze()`. It freezes the collection and everything inside it, and returns the collection, so `new UtilCollection(text).Freeze()` works. `IsFrozen()` says whether a collection is frozen.
 
@@ -85,6 +88,15 @@ edges.Add(edge); // edge is frozen from here on
 A collection that has never been hashed can still be changed freely. The constructors that take a `List<UtilCollection>` or `HashSet<UtilCollection>` copy it, so changing the original afterwards doesn't change the collection.
 
 A frozen collection can't change, so it is safe to share between threads: hashing, comparing, `Contains` and enumerating it from several threads at once all work. Building a collection is not thread-safe, the same as `List` and `HashSet`: fill it on one thread, then share it.
+
+### AsMultiset
+Returns the same elements as a multiset. For a set read from an instance string, this brings back the repeated elements the set dropped, so `{3,3,2,2}` gives four elements. Only sets and multisets can be read as multisets.
+
+### IsMultiset
+Returns true if the collection is a multiset.
+
+### IsSubsetOf
+Returns true if every element occurs in the other collection at least as many times as it does in this one. For multisets this compares counts, so `{7,7}` is in `{7,7,1}` but not in `{7,1}`. Both collections must be sets or multisets.
 
 ### parseInt
 Attempts to parse and return itself as an integer.
