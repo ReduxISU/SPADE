@@ -86,6 +86,6 @@ foreach (DefinitionPart part in d.Parts)
 Console.WriteLine(d["E"].Constraints[0]); // E subset N unorderedcross N
 ```
 
-Each part has a `Name`, a `Kind` (`Set`, `Multiset`, `List`, `Int`, `Number`, `String`, `Subset`, `Member`, or `Any` when nothing says what it is), `Of` (what it is a subset or member of, as written), `Path` (where it sits in the outline), and `Constraints` (every constraint naming it, as written). Only the outer format's names are parts; names inside a nested set, like `a` in `S subset {a | a subset U}`, are not.
+Each part has a `Name`, a `Kind` (`Set`, `Multiset`, `List`, `Int`, `Number`, `String`, `Formula`, `Cnf`, `Subset`, `Member`, or `Any` when nothing says what it is), `Of` (what it is a subset or member of, as written), `Path` (where it sits in the outline), and `Constraints` (every constraint naming it, as written). Only the outer format's names are parts; names inside a nested set, like `a` in `S subset {a | a subset U}`, are not.
 
 Creating a `StringParser` reads its definition string, so a malformed one, such as `{N | N is set` with its closing brace missing, throws a `FormatException` naming it and the position of the first error, instead of being guessed at. `Definition` is worked out the first time you use it. `DefinitionDescription.Parse(definitionString)` reads a definition string the same way without a `StringParser`, and throws the same `FormatException`.
