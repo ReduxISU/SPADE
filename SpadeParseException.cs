@@ -6,7 +6,10 @@ namespace SPADE;
 /// </summary>
 public class SpadeParseException : FormatException
 {
-    /// <summary>Character position in the instance string, counting from 1, when the error has one.</summary>
+    /// <summary>
+    /// Character position in the instance string, counting from 1, when the error has one.
+    /// For an error from <see cref="Formula.Parse(string)"/> or <see cref="Formula.ParseCnf(string)"/>, the position in the formula's text.
+    /// </summary>
     public int? Position { get; }
 
     /// <summary>What the parser expected at <see cref="Position"/>, when the error has one.</summary>
@@ -50,6 +53,22 @@ public class SpadeParseException : FormatException
     /// <summary>An error with no single position, such as a failed constraint.</summary>
     public SpadeParseException(string message)
         : base(message)
+    {
+    }
+
+    // An error at a position with its own wording, such as a formula error (#44), whose position
+    // counts in the formula's text.
+    internal SpadeParseException(string message, int position, string? expected = null, string? found = null)
+        : base(message)
+    {
+        Position = position;
+        Expected = expected;
+        Found = found;
+    }
+
+    // An error caused by another, such as a failed "is formula" check caused by the formula's syntax error.
+    internal SpadeParseException(string message, Exception? inner)
+        : base(message, inner)
     {
     }
 
