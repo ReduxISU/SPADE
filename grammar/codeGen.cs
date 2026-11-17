@@ -139,6 +139,13 @@ class codeGen : IcollListener
             setDescriptorStack.Pop();
             constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().BUILT_IN_SET().ToString()!, SourceText(context)));
         }
+        else if (context.@object().TERM() != null && context.DEFINITION().ToString() == "is" && FormulaParser.IsTypeWord(context.@object().TERM().GetText()))
+        {
+            // "phi is formula" and "phi is cnf" are type checks (#44). The words are plain TERMs to the
+            // grammar, so the set descriptor ExitObject pushed for them is dropped.
+            setDescriptorStack.Pop();
+            constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, context.@object().TERM().GetText(), SourceText(context)));
+        }
         else
         {
             constraintDescriptorStack.Push(new ConstraintDescriptor(context.TERM().ToString()!, context.DEFINITION().ToString()!, setDescriptorStack.Pop(), SourceText(context)));

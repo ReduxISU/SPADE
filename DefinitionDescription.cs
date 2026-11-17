@@ -31,6 +31,12 @@ public enum PartKind
     /// <summary>"is string": a single value, not a set, list or multiset.</summary>
     String,
 
+    /// <summary>"is formula": a boolean formula such as <c>!(x1 &amp; x2) | x3</c>; read it with <see cref="SPADE.Formula.Parse(UtilCollection)"/>.</summary>
+    Formula,
+
+    /// <summary>"is cnf": a boolean formula in conjunctive normal form, such as <c>(x1 | !x2) &amp; x3</c>; read it with <see cref="SPADE.Formula.Parse(UtilCollection)"/>.</summary>
+    Cnf,
+
     /// <summary>"subset X", with no "is" type; <see cref="DefinitionPart.Of"/> holds X.</summary>
     Subset,
 
@@ -46,7 +52,7 @@ public class DefinitionPart
     /// <summary>The name as written in the format, e.g. "E".</summary>
     public string Name { get; }
 
-    /// <summary>What the part's constraints say it is. An "is set", "is multiset", "is list", "is int", "is number" or "is string" constraint wins over "subset" or "in".</summary>
+    /// <summary>What the part's constraints say it is. An "is set", "is multiset", "is list", "is int", "is number", "is string", "is formula" or "is cnf" constraint wins over "subset" or "in".</summary>
     public PartKind Kind { get; }
 
     /// <summary>
@@ -211,7 +217,7 @@ public class DefinitionDescription
             Subjects(inner, subjects);
     }
 
-    // An "is set/multiset/list/int/number/string" wins the kind; Of comes from the first subset, else the first membership.
+    // An "is set/multiset/list/int/number/string/formula/cnf" wins the kind; Of comes from the first subset, else the first membership.
     private static (PartKind, string?) Classify(List<collParser.ConstraintContext> constraints, HashSet<string> names)
     {
         PartKind? type = null;
@@ -248,6 +254,12 @@ public class DefinitionDescription
                 if (obj.BUILT_IN_SET() != null)
                 {
                     type ??= objText == "number" ? PartKind.Number : PartKind.Int;
+                    continue;
+                }
+                // "formula" and "cnf" are plain words to the grammar (#44).
+                if (obj.TERM() != null && FormulaParser.IsTypeWord(objText))
+                {
+                    type ??= objText == "cnf" ? PartKind.Cnf : PartKind.Formula;
                     continue;
                 }
             }

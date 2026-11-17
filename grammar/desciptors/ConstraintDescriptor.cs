@@ -41,9 +41,10 @@ class ConstraintDescriptor
 
     // The failure belongs to this constraint's name, so a caller can find the part without reading
     // the message (#19). The element is kept in full; the message shortens it.
-    private SpadeParseException Failure(string reason, UtilCollection element, (string Value, string Part)? missing = null)
+    private SpadeParseException Failure(string reason, UtilCollection element, (string Value, string Part)? missing = null, Exception? cause = null)
     {
-        return new SpadeParseException($"Constraint {text} failed: {reason}")
+        string message = $"Constraint {text} failed: {reason}";
+        return new SpadeParseException(message, cause)
         {
             Part = term,
             Element = element.ToString(),
@@ -90,6 +91,24 @@ class ConstraintDescriptor
                             if (!map[term].IsValue() || !NumberValue.IsNumber(map[term].ToString()))
                             {
                                 throw Failure($"{Describe(map[term])} is not a number", map[term]);
+                            }
+                            break;
+                        case "formula":
+                        case "cnf":
+                            // A formula is a single value; one with ( ) or , in it is quoted in the instance (#44).
+                            string kind = built_in == "cnf" ? "a CNF formula" : "a formula";
+                            if (!map[term].IsValue())
+                            {
+                                throw Failure($"{Describe(map[term])} is not {kind}; a formula with ( ) or , in it is written in double quotes, like \"(x1 | x2) & x3\"", map[term]);
+                            }
+                            try
+                            {
+                                if (built_in == "cnf") Formula.ParseCnf(map[term].ToString());
+                                else Formula.Parse(map[term].ToString());
+                            }
+                            catch (SpadeParseException e)
+                            {
+                                throw Failure($"{Describe(map[term])} is not {kind}: {e.Message}", map[term], cause: e);
                             }
                             break;
                         case "string":
